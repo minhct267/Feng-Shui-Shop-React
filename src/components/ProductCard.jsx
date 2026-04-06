@@ -1,7 +1,6 @@
 export default function ProductCard({ product, staggered }) {
-  const imageUrl = product.ImageName
-    ? `/products/${product.ImageName}`
-    : null;
+  const imageUrl = product.ImageUrl
+    ?? (product.ImageName ? `/products/${product.ImageName}` : null);
 
   const priceDisplay = product.Price != null
     ? `$${product.Price.toFixed(0)}`

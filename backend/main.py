@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import get_db_connection
 from models import ProductCard, Category
+from blob_storage import blob_url_for_image
 
 app = FastAPI(title="Feng Shui Shop API")
 
@@ -32,6 +33,8 @@ def get_products():
         columns = [col[0] for col in cursor.description]
         rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         conn.close()
+        for row in rows:
+            row["ImageUrl"] = blob_url_for_image(row.get("ImageName"))
         return rows
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

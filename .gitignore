@@ -26,9 +26,12 @@ dist-ssr
 # API
 .venv
 backend/.env
+__pycache__/
 
 # Others
 db.sql
 seed.sql
-template.html
+template_login.html
+template_homepage.html
+template_addproduct.html
 products

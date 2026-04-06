@@ -10,6 +10,7 @@ class ProductCard(BaseModel):
     ShortDescription: Optional[str] = None
     CategoryName: str
     ImageName: Optional[str] = None
+    ImageUrl: Optional[str] = None
 
 
 class Category(BaseModel):
