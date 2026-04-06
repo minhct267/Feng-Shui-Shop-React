@@ -44,12 +44,18 @@ export default function Header() {
           <NavLink to="/" className={navLinkClass} end>
             Home
           </NavLink>
-          <a
-            className="font-headline tracking-tight text-stone-600 hover:text-amber-900 transition-colors"
-            href="#"
-          >
-            Products
-          </a>
+          {user?.role === "admin" ? (
+            <NavLink to="/admin/products/add" className={navLinkClass}>
+              Products
+            </NavLink>
+          ) : (
+            <a
+              className="font-headline tracking-tight text-stone-600 hover:text-amber-900 transition-colors"
+              href="#"
+            >
+              Products
+            </a>
+          )}
           <a
             className="font-headline tracking-tight text-stone-600 hover:text-amber-900 transition-colors"
             href="#"

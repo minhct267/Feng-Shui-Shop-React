@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
@@ -17,3 +17,16 @@ class Category(BaseModel):
     CategoryId: int
     CategoryName: str
     Description: Optional[str] = None
+
+
+class Promotion(BaseModel):
+    PromotionId: int
+    PromotionName: str
+    Details: str
+    StartDate: str
+    EndDate: str
+
+
+class ProductCreateResponse(BaseModel):
+    ProductId: int
+    message: str

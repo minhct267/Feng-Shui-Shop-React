@@ -3,7 +3,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
-from azure.storage.blob import BlobServiceClient, generate_container_sas, ContainerSasPermissions
+from azure.storage.blob import BlobServiceClient, ContentSettings, generate_container_sas, ContainerSasPermissions
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -64,6 +64,32 @@ def _get_container_sas() -> str:
         )
         _sas_expiry = expiry
         return _sas_token
+
+
+def upload_image(file_name: str, file_data: bytes, content_type: str) -> str:
+    _init_client()
+    if _blob_service_client is None:
+        raise RuntimeError("Azure Blob Storage is not configured")
+
+    blob_client = _blob_service_client.get_blob_client(
+        container=CONTAINER_NAME, blob=file_name
+    )
+    blob_client.upload_blob(
+        file_data,
+        overwrite=True,
+        content_settings=ContentSettings(content_type=content_type),
+    )
+    return file_name
+
+
+def delete_blob(file_name: str) -> None:
+    _init_client()
+    if _blob_service_client is None:
+        return
+    blob_client = _blob_service_client.get_blob_client(
+        container=CONTAINER_NAME, blob=file_name
+    )
+    blob_client.delete_blob(delete_snapshots="include")
 
 
 def blob_url_for_image(image_name: str | None) -> str | None:
