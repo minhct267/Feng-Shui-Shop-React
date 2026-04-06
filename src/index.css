@@ -17,3 +17,16 @@
 body {
   margin: 0;
 }
+
+.form-underline {
+  border: none;
+  border-bottom: 1px solid rgba(212, 196, 183, 0.4);
+  border-radius: 0;
+  background: transparent;
+}
+
+.form-underline:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom: 2px solid #79542e;
+}
