@@ -48,9 +48,11 @@ export async function fetchPromotions() {
   return res.json();
 }
 
-export async function checkProductName(name) {
+export async function checkProductName(name, excludeId) {
+  const params = new URLSearchParams({ name });
+  if (excludeId != null) params.set("exclude_id", excludeId);
   const res = await fetch(
-    `${API_BASE}/admin/products/check-name?name=${encodeURIComponent(name)}`,
+    `${API_BASE}/admin/products/check-name?${params}`,
     { credentials: "include" },
   );
   if (!res.ok) throw new Error("Failed to check name");
@@ -89,6 +91,19 @@ export async function fetchAdminProductDetail(productId) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || "Failed to fetch product detail");
+  }
+  return res.json();
+}
+
+export async function updateProduct(productId, formData) {
+  const res = await fetch(`${API_BASE}/admin/products/${productId}`, {
+    method: "PUT",
+    credentials: "include",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to update product");
   }
   return res.json();
 }

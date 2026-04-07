@@ -82,6 +82,38 @@ def upload_image(file_name: str, file_data: bytes, content_type: str) -> str:
     return file_name
 
 
+BIN_CONTAINER = os.getenv("AZURE_STORAGE_BIN_CONTAINER", "bin")
+
+_bin_container_ensured = False
+
+
+def move_blob_to_bin(file_name: str) -> None:
+    """Copy a blob to the 'bin' container then delete the source."""
+    global _bin_container_ensured
+    _init_client()
+    if _blob_service_client is None:
+        return
+
+    if not _bin_container_ensured:
+        try:
+            _blob_service_client.create_container(BIN_CONTAINER)
+        except Exception:
+            pass
+        _bin_container_ensured = True
+
+    source = _blob_service_client.get_blob_client(CONTAINER_NAME, file_name)
+    dest = _blob_service_client.get_blob_client(BIN_CONTAINER, file_name)
+
+    try:
+        dest.start_copy_from_url(source.url)
+        source.delete_blob(delete_snapshots="include")
+    except Exception:
+        try:
+            delete_blob(file_name)
+        except Exception:
+            pass
+
+
 def delete_blob(file_name: str) -> None:
     _init_client()
     if _blob_service_client is None:

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   fetchAdminProducts,
   fetchAdminProductDetail,
@@ -9,6 +10,7 @@ import ConfirmModal from "./ConfirmModal";
 const PAGE_SIZE = 10;
 
 export default function ManageProducts() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -458,7 +460,10 @@ export default function ManageProducts() {
 
                     {/* Action Buttons */}
                     <section className="flex flex-col sm:flex-row gap-3 pt-4">
-                      <button className="flex-1 py-4 bg-primary text-on-primary flex items-center justify-center gap-2 rounded-xl hover:bg-primary-container transition-all active:scale-[0.98]">
+                      <button
+                        onClick={() => navigate(`/admin/products/update/${selectedId}`)}
+                        className="flex-1 py-4 bg-primary text-on-primary flex items-center justify-center gap-2 rounded-xl hover:bg-primary-container transition-all active:scale-[0.98]"
+                      >
                         <span className="material-symbols-outlined text-xl">
                           edit
                         </span>

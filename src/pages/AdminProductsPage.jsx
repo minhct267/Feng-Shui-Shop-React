@@ -1,10 +1,13 @@
 import { useEffect } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function AdminProductsPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isUpdateRoute = location.pathname.startsWith("/admin/products/update");
 
   useEffect(() => {
     if (loading) return;
@@ -55,6 +58,14 @@ export default function AdminProductsPage() {
               Manage Products
             </span>
           </NavLink>
+          {isUpdateRoute && (
+            <div className="flex items-center pl-10 pr-6 py-3 bg-stone-200 text-amber-900 font-bold rounded-r-full">
+              <span className="material-symbols-outlined mr-3 text-lg">edit_note</span>
+              <span className="text-xs tracking-widest uppercase font-medium">
+                Update Product
+              </span>
+            </div>
+          )}
         </nav>
       </aside>
 

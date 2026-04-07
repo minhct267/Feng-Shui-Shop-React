@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import AdminProductsPage from './pages/AdminProductsPage'
 import AddProductPage from './pages/AddProductPage'
+import UpdateProductPage from './pages/UpdateProductPage'
 import ManageProducts from './components/ManageProducts'
 
 function Layout() {
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <ManageProducts /> },
           { path: 'add', element: <AddProductPage /> },
+          { path: 'update/:productId', element: <UpdateProductPage /> },
         ],
       },
     ],

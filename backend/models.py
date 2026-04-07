@@ -73,5 +73,11 @@ class AdminProductDetail(BaseModel):
     UpdatedDate: Optional[str] = None
     CategoryName: str
     CategoryId: int
+    PromotionId: Optional[int] = None
     PromotionName: Optional[str] = None
     Images: list[ProductImage] = []
+
+
+class ProductUpdateResponse(BaseModel):
+    ProductId: int
+    message: str

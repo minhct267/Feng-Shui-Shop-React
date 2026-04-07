@@ -35,4 +35,5 @@ template_login.html
 template_homepage.html
 template_addproduct.html
 template_product.html
+template_update.html
 products
