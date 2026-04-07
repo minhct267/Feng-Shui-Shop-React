@@ -26,14 +26,21 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 COOKIE_NAME = "access_token"
 
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "!HAIdrone123"
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "!HAIdrone123")
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+IS_PRODUCTION = ENVIRONMENT == "production"
+
+COOKIE_SAMESITE = "none" if IS_PRODUCTION else "lax"
+COOKIE_SECURE = IS_PRODUCTION
 
 app = FastAPI(title="Feng Shui Shop API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -63,8 +70,8 @@ def login(body: LoginRequest, response: Response):
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=False,
+        samesite=COOKIE_SAMESITE,
+        secure=COOKIE_SECURE,
         path="/",
         max_age=JWT_EXPIRY_HOURS * 3600,
     )
@@ -87,7 +94,7 @@ def get_current_user(request: Request):
 
 @app.post("/api/logout")
 def logout(response: Response):
-    response.delete_cookie(key=COOKIE_NAME, path="/", httponly=True, samesite="lax")
+    response.delete_cookie(key=COOKIE_NAME, path="/", httponly=True, samesite=COOKIE_SAMESITE, secure=COOKIE_SECURE)
     return {"message": "Logged out"}
 
 
