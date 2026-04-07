@@ -1,7 +1,8 @@
 const API_BASE = "/api";
 
-export async function fetchProducts() {
-  const res = await fetch(`${API_BASE}/products`);
+export async function fetchProducts(page = 1, pageSize = 30) {
+  const params = new URLSearchParams({ page, page_size: pageSize });
+  const res = await fetch(`${API_BASE}/products?${params}`);
   if (!res.ok) throw new Error("Failed to fetch products");
   return res.json();
 }

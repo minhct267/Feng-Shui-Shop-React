@@ -13,6 +13,13 @@ class ProductCard(BaseModel):
     ImageUrl: Optional[str] = None
 
 
+class ProductListResponse(BaseModel):
+    items: list[ProductCard]
+    total: int
+    page: int
+    page_size: int
+
+
 class Category(BaseModel):
     CategoryId: int
     CategoryName: str

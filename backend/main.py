@@ -15,6 +15,7 @@ from database import get_db_connection
 from models import (
     ProductCard, Category, Promotion, ProductCreateResponse,
     AdminProductListItem, AdminProductListResponse, ProductImage, AdminProductDetail,
+    ProductListResponse,
 )
 from blob_storage import blob_url_for_image, upload_image, delete_blob
 
@@ -105,11 +106,22 @@ def require_admin(request: Request):
     return payload
 
 
-@app.get("/api/products", response_model=list[ProductCard])
-def get_products():
+@app.get("/api/products", response_model=ProductListResponse)
+def get_products(page: int = 1, page_size: int = 30):
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 60:
+        page_size = 30
+
+    offset = (page - 1) * page_size
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM Products")
+        total = cursor.fetchone()[0]
+
         cursor.execute("""
             SELECT p.ProductId, p.ProductName, p.Price, p.OldPrice,
                    p.ShortDescription, c.CategoryName, pi.ImageName
@@ -117,14 +129,18 @@ def get_products():
             JOIN ProductCategories c ON p.CategoryId = c.CategoryId
             LEFT JOIN ProductImages pi ON p.ProductId = pi.ProductId
                  AND pi.ImageName LIKE '%[_]1.%'
-            ORDER BY p.ProductId
-        """)
+            ORDER BY p.UpdatedDate DESC
+            OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+        """, (offset, page_size))
+
         columns = [col[0] for col in cursor.description]
         rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         conn.close()
+
         for row in rows:
             row["ImageUrl"] = blob_url_for_image(row.get("ImageName"))
-        return rows
+
+        return ProductListResponse(items=rows, total=total, page=page, page_size=page_size)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
