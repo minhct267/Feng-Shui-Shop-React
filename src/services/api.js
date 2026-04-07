@@ -68,3 +68,38 @@ export async function createProduct(formData) {
   }
   return res.json();
 }
+
+export async function fetchAdminProducts(search = "", page = 1, pageSize = 10) {
+  const params = new URLSearchParams({ search, page, page_size: pageSize });
+  const res = await fetch(`${API_BASE}/admin/products/list?${params}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to fetch products");
+  }
+  return res.json();
+}
+
+export async function fetchAdminProductDetail(productId) {
+  const res = await fetch(`${API_BASE}/admin/products/${productId}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to fetch product detail");
+  }
+  return res.json();
+}
+
+export async function deleteProduct(productId) {
+  const res = await fetch(`${API_BASE}/admin/products/${productId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to delete product");
+  }
+  return res.json();
+}

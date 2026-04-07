@@ -45,7 +45,7 @@ export default function Header() {
             Home
           </NavLink>
           {user?.role === "admin" ? (
-            <NavLink to="/admin/products/add" className={navLinkClass}>
+            <NavLink to="/admin/products" className={navLinkClass}>
               Products
             </NavLink>
           ) : (

@@ -12,7 +12,10 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from database import get_db_connection
-from models import ProductCard, Category, Promotion, ProductCreateResponse
+from models import (
+    ProductCard, Category, Promotion, ProductCreateResponse,
+    AdminProductListItem, AdminProductListResponse, ProductImage, AdminProductDetail,
+)
 from blob_storage import blob_url_for_image, upload_image, delete_blob
 
 load_dotenv()
@@ -354,6 +357,186 @@ async def create_product(
                 delete_blob(blob_name)
             except Exception:
                 pass
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/admin/products/list", response_model=AdminProductListResponse)
+def list_admin_products(
+    search: str = "",
+    page: int = 1,
+    page_size: int = 10,
+    admin=Depends(require_admin),
+):
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 50:
+        page_size = 10
+
+    search = search.strip()
+    offset = (page - 1) * page_size
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        if search:
+            count_sql = """
+                SELECT COUNT(*) FROM Products p
+                JOIN ProductCategories c ON p.CategoryId = c.CategoryId
+                WHERE p.ProductName LIKE ?
+            """
+            cursor.execute(count_sql, (f"%{search}%",))
+        else:
+            cursor.execute("SELECT COUNT(*) FROM Products")
+
+        total = cursor.fetchone()[0]
+
+        if search:
+            data_sql = """
+                SELECT p.ProductId, p.ProductName, p.Price, p.Quantity,
+                       c.CategoryName, pi.ImageName
+                FROM Products p
+                JOIN ProductCategories c ON p.CategoryId = c.CategoryId
+                LEFT JOIN ProductImages pi ON p.ProductId = pi.ProductId
+                     AND pi.ImageName LIKE '%[_]1.%'
+                WHERE p.ProductName LIKE ?
+                ORDER BY p.ProductId
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            """
+            cursor.execute(data_sql, (f"%{search}%", offset, page_size))
+        else:
+            data_sql = """
+                SELECT p.ProductId, p.ProductName, p.Price, p.Quantity,
+                       c.CategoryName, pi.ImageName
+                FROM Products p
+                JOIN ProductCategories c ON p.CategoryId = c.CategoryId
+                LEFT JOIN ProductImages pi ON p.ProductId = pi.ProductId
+                     AND pi.ImageName LIKE '%[_]1.%'
+                ORDER BY p.ProductId
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            """
+            cursor.execute(data_sql, (offset, page_size))
+
+        columns = [col[0] for col in cursor.description]
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        items = []
+        for row in rows:
+            items.append(AdminProductListItem(
+                ProductId=row["ProductId"],
+                ProductName=row["ProductName"],
+                Price=row["Price"],
+                Quantity=row["Quantity"],
+                CategoryName=row["CategoryName"],
+                ImageUrl=blob_url_for_image(row.get("ImageName")),
+            ))
+
+        return AdminProductListResponse(items=items, total=total, page=page, page_size=page_size)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/admin/products/{product_id}", response_model=AdminProductDetail)
+def get_admin_product_detail(product_id: int, admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT p.ProductId, p.ProductName, p.Price, p.OldPrice,
+                   p.ShortDescription, p.DetailedDescription, p.Quantity,
+                   CONVERT(VARCHAR(10), p.UpdatedDate, 120) AS UpdatedDate,
+                   c.CategoryName, p.CategoryId,
+                   pr.PromotionName
+            FROM Products p
+            JOIN ProductCategories c ON p.CategoryId = c.CategoryId
+            LEFT JOIN Promotions pr ON p.PromotionId = pr.PromotionId
+            WHERE p.ProductId = ?
+        """, (product_id,))
+
+        columns = [col[0] for col in cursor.description]
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Product not found")
+
+        product = dict(zip(columns, row))
+
+        cursor.execute("""
+            SELECT ImageId, ImageName, ImageDescription
+            FROM ProductImages
+            WHERE ProductId = ?
+            ORDER BY ImageId
+        """, (product_id,))
+
+        img_columns = [col[0] for col in cursor.description]
+        img_rows = [dict(zip(img_columns, r)) for r in cursor.fetchall()]
+
+        images = [
+            ProductImage(
+                ImageId=img["ImageId"],
+                ImageName=img["ImageName"],
+                ImageDescription=img.get("ImageDescription"),
+                ImageUrl=blob_url_for_image(img["ImageName"]),
+            )
+            for img in img_rows
+        ]
+
+        return AdminProductDetail(
+            ProductId=product["ProductId"],
+            ProductName=product["ProductName"],
+            Price=product["Price"],
+            OldPrice=product["OldPrice"],
+            ShortDescription=product["ShortDescription"],
+            DetailedDescription=product["DetailedDescription"],
+            Quantity=product["Quantity"],
+            UpdatedDate=product["UpdatedDate"],
+            CategoryName=product["CategoryName"],
+            CategoryId=product["CategoryId"],
+            PromotionName=product.get("PromotionName"),
+            Images=images,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.delete("/api/admin/products/{product_id}")
+def delete_admin_product(product_id: int, admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT ProductId FROM Products WHERE ProductId = ?", (product_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Product not found")
+
+        cursor.execute("SELECT ImageName FROM ProductImages WHERE ProductId = ?", (product_id,))
+        blob_names = [r[0] for r in cursor.fetchall()]
+
+        cursor.execute("DELETE FROM OrderDetails WHERE ProductId = ?", (product_id,))
+        cursor.execute("DELETE FROM ProductImages WHERE ProductId = ?", (product_id,))
+        cursor.execute("DELETE FROM Products WHERE ProductId = ?", (product_id,))
+
+        conn.commit()
+
+        for blob_name in blob_names:
+            try:
+                delete_blob(blob_name)
+            except Exception:
+                pass
+
+        return {"message": "Product deleted successfully"}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()

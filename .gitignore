@@ -34,4 +34,5 @@ seed.sql
 template_login.html
 template_homepage.html
 template_addproduct.html
+template_product.html
 products

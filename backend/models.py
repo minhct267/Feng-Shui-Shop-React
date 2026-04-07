@@ -30,3 +30,41 @@ class Promotion(BaseModel):
 class ProductCreateResponse(BaseModel):
     ProductId: int
     message: str
+
+
+class AdminProductListItem(BaseModel):
+    ProductId: int
+    ProductName: str
+    Price: Optional[float] = None
+    Quantity: int
+    CategoryName: str
+    ImageUrl: Optional[str] = None
+
+
+class AdminProductListResponse(BaseModel):
+    items: list[AdminProductListItem]
+    total: int
+    page: int
+    page_size: int
+
+
+class ProductImage(BaseModel):
+    ImageId: int
+    ImageName: str
+    ImageDescription: Optional[str] = None
+    ImageUrl: Optional[str] = None
+
+
+class AdminProductDetail(BaseModel):
+    ProductId: int
+    ProductName: str
+    Price: Optional[float] = None
+    OldPrice: Optional[float] = None
+    ShortDescription: Optional[str] = None
+    DetailedDescription: Optional[str] = None
+    Quantity: int
+    UpdatedDate: Optional[str] = None
+    CategoryName: str
+    CategoryId: int
+    PromotionName: Optional[str] = None
+    Images: list[ProductImage] = []

@@ -4,7 +4,9 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import AdminProductsPage from './pages/AdminProductsPage'
 import AddProductPage from './pages/AddProductPage'
+import ManageProducts from './components/ManageProducts'
 
 function Layout() {
   return (
@@ -22,7 +24,14 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <main className="pt-20"><HomePage /></main> },
       { path: '/login', element: <LoginPage /> },
-      { path: '/admin/products/add', element: <AddProductPage /> },
+      {
+        path: '/admin/products',
+        element: <AdminProductsPage />,
+        children: [
+          { index: true, element: <ManageProducts /> },
+          { path: 'add', element: <AddProductPage /> },
+        ],
+      },
     ],
   },
 ])

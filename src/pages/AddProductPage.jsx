@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useBlocker } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import { fetchCategories, fetchPromotions, createProduct, checkProductName } from "../services/api";
 import ConfirmModal from "../components/ConfirmModal";
 
@@ -73,7 +72,6 @@ function validateForm(form, images, nameStatus) {
 }
 
 export default function AddProductPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -95,12 +93,6 @@ export default function AddProductPage() {
   const saveTimerRef = useRef(null);
   const nameCheckRef = useRef(null);
   const nameCheckAbortRef = useRef(null);
-
-  // Redirect non-admin users
-  useEffect(() => {
-    if (user && user.role !== "admin") navigate("/", { replace: true });
-    if (!user) navigate("/login", { replace: true });
-  }, [user, navigate]);
 
   // Load categories and promotions
   useEffect(() => {
@@ -350,73 +342,48 @@ export default function AddProductPage() {
   const errorClass = "text-error text-xs mt-1";
 
   return (
-    <main className="pt-32 pb-24 px-8 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12">
-      {/* Sidebar */}
-      <aside className="md:col-span-3">
-        <div className="sticky top-32 space-y-8">
-          <div>
-            <h2 className="font-headline text-2xl text-primary italic mb-2">Curator Portal</h2>
-            <p className="text-on-surface-variant text-sm font-light">Inventory Management</p>
-          </div>
-
-          <nav className="flex flex-col gap-1">
-            <span className="group flex items-center gap-3 px-4 py-3 bg-surface-container-highest text-primary font-semibold rounded-lg">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>add_circle</span>
-              <span className="font-label uppercase tracking-widest text-xs">New Product</span>
-            </span>
-          </nav>
-
-          {/* Live Preview Card */}
-          <div className="space-y-3">
-            <p className="text-xs font-label uppercase tracking-widest text-primary">Live Preview</p>
-            <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
-              <div className="aspect-[4/5] bg-surface-container overflow-hidden">
-                {images.length > 0 ? (
-                  <img
-                    className="w-full h-full object-cover"
-                    alt="Preview"
-                    src={images[0].preview}
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-on-surface-variant/40">
-                    <span className="material-symbols-outlined text-4xl mb-2">image</span>
-                    <span className="text-xs">No Image</span>
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <span className="font-label uppercase tracking-widest text-[10px] text-on-surface-variant mb-1 block">
-                  {selectedCategory?.CategoryName || "Category"}
-                </span>
-                <h3 className="font-headline text-base text-on-surface mb-1 truncate">
-                  {form.productName || "Product Name"}
-                </h3>
-                <p className="text-on-surface-variant text-xs font-light italic truncate">
-                  {form.shortDescription || "Short description..."}
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="font-headline text-sm text-primary">
-                    {form.price ? `$${parseFloat(form.price).toFixed(0)}` : "$0"}
-                  </span>
-                  {form.oldPrice && (
-                    <span className="font-headline text-xs text-on-surface-variant line-through">
-                      ${parseFloat(form.oldPrice).toFixed(0)}
-                    </span>
-                  )}
-                </div>
-                {form.quantity !== "" && (
-                  <span className="inline-block mt-2 text-[10px] font-label uppercase tracking-widest bg-surface-container px-2 py-1 rounded text-on-surface-variant">
-                    Qty: {form.quantity}
-                  </span>
-                )}
-              </div>
+    <div className="p-8 pb-24 max-w-5xl mx-auto">
+      {/* Live Preview Card */}
+      <div className="mb-10 flex flex-col sm:flex-row gap-6 items-start bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm border border-surface-container-high">
+        <div className="w-full sm:w-40 aspect-[4/5] sm:aspect-square bg-surface-container overflow-hidden flex-shrink-0">
+          {images.length > 0 ? (
+            <img className="w-full h-full object-cover" alt="Preview" src={images[0].preview} />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-on-surface-variant/40">
+              <span className="material-symbols-outlined text-4xl mb-2">image</span>
+              <span className="text-xs">No Image</span>
             </div>
-          </div>
+          )}
         </div>
-      </aside>
+        <div className="p-4 sm:py-5">
+          <span className="font-label uppercase tracking-widest text-[10px] text-on-surface-variant mb-1 block">
+            {selectedCategory?.CategoryName || "Category"}
+          </span>
+          <h3 className="font-headline text-lg text-on-surface mb-1 truncate">
+            {form.productName || "Product Name"}
+          </h3>
+          <p className="text-on-surface-variant text-xs font-light italic truncate">
+            {form.shortDescription || "Short description..."}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="font-headline text-sm text-primary">
+              {form.price ? `$${parseFloat(form.price).toFixed(0)}` : "$0"}
+            </span>
+            {form.oldPrice && (
+              <span className="font-headline text-xs text-on-surface-variant line-through">
+                ${parseFloat(form.oldPrice).toFixed(0)}
+              </span>
+            )}
+          </div>
+          {form.quantity !== "" && (
+            <span className="inline-block mt-2 text-[10px] font-label uppercase tracking-widest bg-surface-container px-2 py-1 rounded text-on-surface-variant">
+              Qty: {form.quantity}
+            </span>
+          )}
+        </div>
+      </div>
 
-      {/* Main Form */}
-      <section className="md:col-span-9 space-y-12">
+      <div className="space-y-12">
         <header>
           <h1 className="text-4xl md:text-5xl font-headline text-on-background leading-tight">
             Manifest New Essence
@@ -767,7 +734,7 @@ export default function AddProductPage() {
             </button>
           </div>
         </form>
-      </section>
+      </div>
 
       {/* Confirmation Modal */}
       <ConfirmModal
@@ -862,6 +829,6 @@ export default function AddProductPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
