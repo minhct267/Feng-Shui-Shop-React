@@ -9,9 +9,12 @@ export default function ConfirmModal({
   onConfirm,
   onCancel,
   loading = false,
+  loadingMessage = "Processing...",
   success = false,
   successMessage = "Success!",
+  successSubMessage = "",
   error = "",
+  variant = "primary",
 }) {
   const overlayRef = useRef(null);
 
@@ -43,7 +46,7 @@ export default function ConfirmModal({
             </span>
           </div>
           <h3 className="text-2xl font-headline text-on-surface mb-2">{successMessage}</h3>
-          <p className="text-on-surface-variant text-sm">Redirecting to homepage...</p>
+          {successSubMessage && <p className="text-on-surface-variant text-sm">{successSubMessage}</p>}
         </div>
       </div>
     );
@@ -68,8 +71,8 @@ export default function ConfirmModal({
 
         {loading && (
           <div className="mb-6 flex items-center gap-3 text-on-surface-variant text-sm">
-            <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
-            <span>Processing...</span>
+            <span className={`material-symbols-outlined animate-spin ${variant === "destructive" ? "text-error" : "text-primary"}`}>progress_activity</span>
+            <span>{loadingMessage}</span>
           </div>
         )}
 
@@ -84,19 +87,25 @@ export default function ConfirmModal({
           </button>
           <button
             type="button"
-            className="bg-primary text-on-primary px-8 py-4 rounded-full font-label uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:bg-primary-container transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-8 py-4 rounded-full font-label uppercase tracking-widest text-xs shadow-lg transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed ${
+              variant === "destructive"
+                ? "bg-error text-on-error shadow-error/20 hover:bg-error/80"
+                : "bg-primary text-on-primary shadow-primary/20 hover:bg-primary-container"
+            }`}
             onClick={onConfirm}
             disabled={loading}
           >
             {loading ? (
               <>
                 <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
-                Uploading...
+                {loadingMessage}
               </>
             ) : (
               <>
                 {confirmLabel}
-                <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                <span className="material-symbols-outlined text-sm">
+                  {variant === "destructive" ? "delete_forever" : "auto_awesome"}
+                </span>
               </>
             )}
           </button>

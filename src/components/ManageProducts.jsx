@@ -506,9 +506,12 @@ export default function ManageProducts() {
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
         loading={deleting}
+        loadingMessage="Deleting..."
         success={deleteSuccess}
         successMessage="Product Deleted!"
+        successSubMessage="The product has been removed from the collection."
         error={deleteError}
+        variant="destructive"
       >
         <p className="text-on-surface-variant text-sm leading-relaxed">
           Are you sure you want to permanently delete{" "}

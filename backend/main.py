@@ -735,7 +735,7 @@ def delete_admin_product(product_id: int, admin=Depends(require_admin)):
 
         for blob_name in blob_names:
             try:
-                delete_blob(blob_name)
+                move_blob_to_bin(blob_name)
             except Exception:
                 pass
 
