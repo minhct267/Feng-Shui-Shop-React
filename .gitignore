@@ -29,16 +29,4 @@ backend/.env
 __pycache__/
 
 # Others
-db.sql
-seed.sql
-template_login.html
-template_homepage.html
-template_addproduct.html
-template_product.html
-template_update.html
-template_login_standard.html
-template_homepage_standard.html
-template_addproduct_standard.html
-template_product_standard.html
-template_update_standard.html
 products
