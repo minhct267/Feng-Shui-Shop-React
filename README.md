@@ -18,7 +18,7 @@ An eCommerce Website for a jewelry shop that allows:
 - **Routing:** React Router with `createBrowserRouter` — public home and login; nested admin routes under `/admin/products` (list, add, update by `productId`).
 - **Backend:** Python, FastAPI.
 - **Database:** Azure SQL Database (Data Warehouse) and Azure Blob Storage (Data Lake).
-- **Deployment:** Backend ships with a **Dockerfile** (Python 3.12, ODBC Driver 18 for SQL Server, Uvicorn; port from `PORT`), deployed with **Render**. Frontend is deployed with **Vercel**.
+- **Deployment:** Backend ships with a **Dockerfile** (Python 3.12, ODBC Driver 18 for SQL Server, Uvicorn), deployed with **Render**. Frontend is deployed with **Vercel**.
 
 ## Design
 
@@ -28,29 +28,29 @@ An eCommerce Website for a jewelry shop that allows:
 flowchart TB
   subgraph deployment["Deployment"]
     direction TB
-    Vercel[Vercel — static Vite build, frontend hosting]
-    RenderStack[Render — Docker · Python 3.12 · Uvicorn · Microsoft ODBC Driver 18 for SQL Server]
+    Vercel[Vercel — React, HTML, CSS, JavaScript and Tailwind CSS]
+    RenderStack[Render — Docker, Python, FastAPI, ODBC Driver 18]
   end
 
   subgraph frontend["Frontend — React UI"]
     direction TB
     UI[UI — React 19 + Vite 8]
-    Styling[Styling — Tailwind CSS + custom CSS in src/styles and src/index.css]
-    Routing[Routing — React Router createBrowserRouter — storefront, login, nested /admin/products CRUD]
-    DataClient[Data access — src/services/api.js · fetch with credentials include]
+    Styling[Styling — Custom CSS and little Tailwind CSS]
+    Routing[Routing — React Router createBrowserRouter]
+    DataClient[Data access — src/services/api.js]
     UI --> Styling
     UI --> Routing
     UI --> DataClient
   end
 
   subgraph backend["Backend — FastAPI"]
-    API["FastAPI REST API · JWT in HTTP-only cookies · CORS and SameSite for split frontend and API"]
+    API["FastAPI REST API"]
   end
 
-  subgraph datalayer["Data layer — warehouse + lake pattern"]
+  subgraph datalayer[" Data Warehouse + Data Lake pattern"]
     direction TB
-    AzureSQL[(Azure SQL Database — structured transactional data, DW-style)]
-    AzureBlob[(Azure Blob Storage — product images and time-limited SAS URLs, lake-style)]
+    AzureSQL[(Azure SQL Database — structured data)]
+    AzureBlob[(Azure Blob Storage — logs, product images, user interactions, etc.)]
   end
 
   Vercel --> frontend
@@ -104,12 +104,14 @@ flowchart TB
 ```
 
 ## Challenges
-
-Shipping a split frontend and API required careful **CORS** and **cookie** settings (`SameSite` / `Secure`) so authenticated admin requests work in production as well as on localhost. Storing **JWTs in HTTP-only cookies** improves security versus localStorage but needs consistent `credentials: "include"` and allowed origins. **Azure Blob** uploads and time-limited **SAS** URLs add complexity compared to local file storage while keeping images scalable. The **Docker** image installs the **Microsoft ODBC driver** on Debian so **pyodbc** can reach SQL Server reliably in containers. Large admin forms with live preview, duplicate-name checks, and multi-step confirmation demanded a clear UX flow without blocking the main CRUD APIs.
+- Authentication: Struggling with implementing a secure, cookie-based authentication system across a decoupled frontend and API presented significant CORS and security challenges. As this is currently unresolved, I temporarily use a fixed credentials for the admin login, the full authentication logic will be in future updates.
+- Cloud integration: I want to utilize the capabilities of Azure for online testing. However, transitioning from local file storage to Azure Blob Storage required handling multipart uploads and managing time-limited SAS URLs to ensure secure and scalable image delivery. This is needed for future features' extension and scaling up app (if needed).
+- Backend deployment: Configuring the backend Docker image to connect to SQL Server via pyodbc required specific workarounds. Even though it seems to be easy at first, but I did suffer from some unexpected errors from the Render VM side.
+- CRUD logic for Admin: Designing large administrative forms demanded a clear UX flow to handle live previews, duplicate-name validations, and multi-step confirmations without bottlenecking the main CRUD APIs.
+- Some UI components are difficult to design just by using CSS, that is why Tailwind CSS came to place as a solution.
+- Session/Cookies/Cache are still something I need to figure out to work on it. Also, I need to take care of SQL injection as well.
 
 ## Demo
 
 **Website:** [The Crystal Shroom](https://feng-shui-shop-react.vercel.app/)
-API may
-
-Please be aware that the API might be down, preventing the website from loading data from the Data Warehouse.
+Please be aware that the API might be down frequently (due to Free plan deployment), preventing the website from loading data from the Data Warehouse.
