@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate, useBlocker } from "react-router-dom";
-import { fetchCategories, fetchPromotions, createProduct, checkProductName } from "../services/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useBlocker, useNavigate } from "react-router-dom";
 import ConfirmModal from "../components/ConfirmModal";
+import { checkProductName, createProduct, fetchCategories, fetchPromotions } from "../services/api";
 
 const DRAFT_KEY = "addProductDraft";
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -365,9 +365,9 @@ export default function AddProductPage() {
 
       <div className="admin-form-sections">
         <header className="content-header">
-          <h1>Manifest New Essence</h1>
+          <h1>Add New Product</h1>
           <p>
-            Define the vessel, the price, and the ancient properties. Every entry contributes to the collective balance of the Sanctuary.
+            Define the artifact, the price, and the vibrational properties.
           </p>
         </header>
 
@@ -455,7 +455,7 @@ export default function AddProductPage() {
 
             {/* Price */}
             <div className="form-group">
-              <label className="form-label">Price (USD) *</label>
+              <label className="form-label">Price (AUD) *</label>
               <input
                 className="form-input"
                 type="number"
@@ -470,7 +470,7 @@ export default function AddProductPage() {
 
             {/* Old Price */}
             <div className="form-group">
-              <label className="form-label">Old Price (USD)</label>
+              <label className="form-label">Old Price (AUD)</label>
               <input
                 className="form-input"
                 type="number"
@@ -549,7 +549,7 @@ export default function AddProductPage() {
           {/* Sacred Imagery Section */}
           <div className="imagery-section">
             <div className="section-divider">
-              <h3>Sacred Imagery</h3>
+              <h3>Product Images</h3>
               <div className="divider-line"></div>
             </div>
 
@@ -666,7 +666,7 @@ export default function AddProductPage() {
               disabled={nameStatus === "taken"}
               className="submit-btn"
             >
-              Curate Product
+              Add Product
               <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>auto_awesome</span>
             </button>
           </div>

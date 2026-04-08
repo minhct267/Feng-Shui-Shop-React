@@ -27,7 +27,7 @@ export default function Sidebar() {
           ))}
         </nav>
         <div className="basket-card">
-          <h4>Sacred Selection</h4>
+          <h4>Your Selection</h4>
           <p>
             Your basket currently carries the energy of your chosen stones.
           </p>

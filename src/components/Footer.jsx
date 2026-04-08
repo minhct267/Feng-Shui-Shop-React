@@ -3,10 +3,9 @@ export default function Footer() {
     <footer className="site-footer">
       <div className="footer-grid">
         <div>
-          <div className="footer-logo">The Elemental Sanctuary</div>
+          <div className="footer-logo">The Crystal Shroom</div>
           <p className="footer-brand-text">
-            Curated wisdom for the modern home. Harnessing the ancient power of
-            the five elements.
+            Crystals, intention, and calm for modern spaces.
           </p>
         </div>
         <div>
@@ -22,12 +21,15 @@ export default function Footer() {
         <div>
           <h4 className="footer-title">Connect</h4>
           <div className="footer-links">
+            <a href="#">Facebook</a>
             <a href="#">Instagram</a>
-            <a href="#">Pinterest</a>
+            <a href="#">Twitter</a>
+            <a href="#">YouTube</a>
+            <a href="#">TikTok</a>
           </div>
         </div>
         <div>
-          <h4 className="footer-title">Sacred Newsletter</h4>
+          <h4 className="footer-title">Newsletter</h4>
           <div className="newsletter-form">
             <input
               className="newsletter-input"
@@ -44,7 +46,7 @@ export default function Footer() {
       </div>
       <div className="footer-bottom">
         <p className="copyright">
-          &copy; 2024 The Elemental Sanctuary. Curated Wisdom.
+          &copy; 2026 The Crystal Shroom
         </p>
         <div className="legal-links">
           <a className="legal-link" href="#">Privacy</a>

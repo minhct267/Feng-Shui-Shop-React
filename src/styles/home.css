@@ -27,9 +27,28 @@
   transform: scale(1.05);
 }
 
+/* Local asset: landscape — focal jewelry on right; anchor left so copy sits over calmer sand */
+.hero-bg-img {
+  object-position: 22% center;
+}
+
+.hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.58) 0%,
+    rgba(0, 0, 0, 0.32) 42%,
+    rgba(0, 0, 0, 0.08) 68%,
+    transparent 82%
+  );
+}
+
 .hero-content {
   position: relative;
-  z-index: 10;
+  z-index: 2;
   max-width: 1536px;
   margin: 0 auto;
   padding: 0 2rem;
@@ -40,39 +59,30 @@
   max-width: 42rem;
 }
 
-.badge {
-  display: inline-block;
-  font-family: var(--font-label);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.75rem;
-  margin-bottom: 1.5rem;
-  color: var(--primary);
-  padding: 0.25rem 0.75rem;
-  border: 1px solid rgba(212, 196, 183, 0.4);
-  border-radius: 9999px;
-}
-
-.hero h1 {
+.hero .hero-text-box h1 {
   font-family: var(--font-headline);
   font-size: clamp(3.75rem, 8vw, 8rem);
   font-weight: 700;
-  color: var(--on-surface);
+  color: #ffffff;
   line-height: 1;
   letter-spacing: -0.05em;
   margin-bottom: 2rem;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 4px 24px rgba(0, 0, 0, 0.25);
 }
 
-.hero h1 i {
+.hero .hero-text-box h1 i {
   font-weight: 300;
 }
 
-.hero p {
+.hero .hero-text-box p {
   font-size: 1.125rem;
-  color: var(--on-surface-variant);
+  color: rgba(255, 255, 255, 0.94);
   line-height: 1.625;
   margin-bottom: 3rem;
   max-width: 32rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .btn-primary {
@@ -87,6 +97,11 @@
   border: none;
   cursor: pointer;
   transition: background-color 0.3s;
+}
+
+.hero .btn-primary {
+  border-radius: 0.375rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 .btn-primary:hover {

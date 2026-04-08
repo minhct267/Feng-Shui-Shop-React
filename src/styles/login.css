@@ -31,33 +31,17 @@
   filter: grayscale(20%) sepia(10%) contrast(90%);
 }
 
+/* Local square asset: center focal point; lighter filter so greens read clearly */
+.visual-side img.login-visual-img {
+  object-position: center 42%;
+  filter: grayscale(12%) sepia(8%) contrast(94%);
+}
+
 .visual-overlay {
   position: absolute;
   inset: 0;
   background-color: rgba(121, 84, 46, 0.1);
   mix-blend-mode: multiply;
-}
-
-.visual-content {
-  position: absolute;
-  bottom: 96px;
-  left: 64px;
-  max-width: 448px;
-}
-
-.visual-content h2 {
-  font-family: var(--font-headline);
-  font-size: 40px;
-  font-weight: 700;
-  line-height: 1.2;
-  margin-bottom: 16px;
-  color: var(--on-surface);
-}
-
-.visual-content p {
-  font-size: 18px;
-  font-weight: 300;
-  color: var(--on-surface-variant);
 }
 
 /* Right form side */

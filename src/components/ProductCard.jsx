@@ -3,7 +3,7 @@ export default function ProductCard({ product, staggered }) {
     ?? (product.ImageName ? `/products/${product.ImageName}` : null);
 
   const priceDisplay = product.Price != null
-    ? `$${product.Price.toFixed(0)}`
+    ? `AU$${product.Price.toFixed(0)}`
     : "";
 
   return (
@@ -35,7 +35,7 @@ export default function ProductCard({ product, staggered }) {
         <span className="product-price">{priceDisplay}</span>
       </div>
       <button className="btn-invoke">
-        Invoke Presence
+        View Product
       </button>
     </article>
   );

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  fetchAdminProducts,
-  fetchAdminProductDetail,
   deleteProduct,
+  fetchAdminProductDetail,
+  fetchAdminProducts,
 } from "../services/api";
 import ConfirmModal from "./ConfirmModal";
 
@@ -134,8 +134,7 @@ export default function ManageProducts() {
             Manage Products
           </h1>
           <p className="text-on-surface-variant font-light max-w-md">
-            Curate the sanctuary's collection. Monitor inventory levels and
-            maintain the spiritual integrity of each listing.
+            Monitor inventory levels and modify product information.
           </p>
         </div>
         <div className="flex items-center space-x-3">

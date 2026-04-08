@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate, useParams, useBlocker, Link } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useBlocker, useNavigate, useParams } from "react-router-dom";
+import ConfirmModal from "../components/ConfirmModal";
 import {
+  checkProductName,
+  fetchAdminProductDetail,
   fetchCategories,
   fetchPromotions,
-  fetchAdminProductDetail,
   updateProduct,
-  checkProductName,
 } from "../services/api";
-import ConfirmModal from "../components/ConfirmModal";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -456,10 +456,9 @@ export default function UpdateProductPage() {
 
       <div className="admin-form-sections">
         <header className="content-header">
-          <h1>Refine Sacred Essence</h1>
+          <h1>Update Product</h1>
           <p>
-            Adjust the spiritual frequencies and details of this curated
-            artifact. Ensure every resonance is perfectly captured.
+            Adjust the vibrational properties and details of this product.
           </p>
         </header>
 
@@ -547,7 +546,7 @@ export default function UpdateProductPage() {
 
             {/* Price */}
             <div className="form-group">
-              <label className="form-label">Price (USD) *</label>
+              <label className="form-label">Price (AUD) *</label>
               <input
                 className="form-input"
                 type="number"
@@ -562,7 +561,7 @@ export default function UpdateProductPage() {
 
             {/* Old Price */}
             <div className="form-group">
-              <label className="form-label">Old Price (USD)</label>
+              <label className="form-label">Old Price (AUD)</label>
               <input
                 className="form-input"
                 type="number"

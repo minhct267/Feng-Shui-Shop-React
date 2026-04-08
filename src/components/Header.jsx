@@ -31,7 +31,7 @@ export default function Header() {
     <header className="site-header">
       <nav>
         <Link to="/" className="logo">
-          The Elemental Sanctuary
+          The Crystal Shroom
         </Link>
         <div className="nav-links">
           <NavLink to="/" className={navLinkClass} end>

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import imgLogin from "../assets/img_login.png";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
@@ -33,24 +34,18 @@ export default function LoginPage() {
     <main className="login-main">
       <div className="visual-side">
         <img
-          alt="Meditation stones"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5g1ycz2vlOuVk2fCI6hyjLCfPUXwk8-bXJQHYhMbzdTr71_QpYKGgFgA3fPW_Z4FC8fBaObc9l5a8AFYTQmBqgnSDH225jU1z4OLbjrJGKtaOGL7Wrd1gPfXG_i_NOOx-y5AiHxYLHu-ekk1PWae5Nrl3qVl2KbmKlG0kt8y-IPKdP0_2xlwebY8-6UJHMsdvLB-dPb9QJc5OgRemLavrtsne3-OqZK6CKEy5TL6bc49BCOVeE5r0soENmZW9zoBBQhr52rpMUAxW"
+          alt="Jade beaded bracelets on river stone in a serene zen setting"
+          className="login-visual-img"
+          src={imgLogin}
         />
         <div className="visual-overlay"></div>
-        <div className="visual-content">
-          <h2>Finding Your Center.</h2>
-          <p>
-            Return to the sanctuary of your intention. Your curated path to
-            elemental balance awaits.
-          </p>
-        </div>
       </div>
 
       <div className="form-side">
         <div className="form-container">
           <div className="form-header">
-            <span className="form-tag">Welcome Back</span>
-            <h1>Login to Sanctuary</h1>
+            <span className="form-tag">Welcome Back!</span>
+            <h1>Sign In</h1>
           </div>
 
           <form className="login-form" onSubmit={handleSubmit}>
@@ -74,7 +69,7 @@ export default function LoginPage() {
 
               <div className="input-group">
                 <label className="input-label" htmlFor="password">
-                  Secret Phrase
+                  Password
                 </label>
                 <input
                   className="form-underline"
@@ -99,7 +94,7 @@ export default function LoginPage() {
               type="submit"
               disabled={submitting}
             >
-              {submitting ? "Entering..." : "Enter the Space"}
+              {submitting ? "Entering..." : "Sign In"}
             </button>
           </form>
         </div>

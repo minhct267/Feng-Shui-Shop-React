@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { fetchProducts } from "../services/api";
 import ProductCard from "./ProductCard";
 
@@ -40,7 +40,7 @@ export default function ProductGrid() {
     <section className="product-section">
       <div className="section-header">
         <div>
-          <h2>Curated Artifacts</h2>
+          <h2>Artifacts</h2>
           <p>Stones of origin, hand-picked for vibrational purity.</p>
         </div>
         <div className="sort-control">

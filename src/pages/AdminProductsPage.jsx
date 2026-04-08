@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function AdminProductsPage() {
@@ -30,19 +30,19 @@ export default function AdminProductsPage() {
             </div>
             <div>
               <h2>Admin Portal</h2>
-              <p>Product Lifecycle</p>
+              <p>Product Management</p>
             </div>
           </div>
         </div>
 
         <nav className="admin-nav">
-          <NavLink to="/admin/products/add" className={sideNavLink}>
-            <span className="material-symbols-outlined">add_circle</span>
-            <span>Add Product</span>
-          </NavLink>
           <NavLink to="/admin/products" end className={sideNavLink}>
             <span className="material-symbols-outlined">inventory_2</span>
             <span>Manage Products</span>
+          </NavLink>
+          <NavLink to="/admin/products/add" className={sideNavLink}>
+            <span className="material-symbols-outlined">add_circle</span>
+            <span>Add Product</span>
           </NavLink>
           {isUpdateRoute && (
             <div className="admin-update-indicator">
