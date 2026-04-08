@@ -1,4 +1,4 @@
-/* ===== Admin Form Container (Add/Update Product) ===== */
+/* Admin form container (Add/Update product) */
 .admin-form-container {
   padding: 2rem;
   padding-bottom: 6rem;
@@ -12,7 +12,7 @@
   gap: 3rem;
 }
 
-/* ===== Live Preview Card ===== */
+/* Live preview card */
 .live-preview {
   margin-bottom: 2.5rem;
   display: flex;
@@ -145,7 +145,7 @@
   color: var(--on-surface-variant);
 }
 
-/* ===== Content Header (Add/Update) ===== */
+/* Content header (Add/Update) */
 .content-header h1 {
   font-family: var(--font-headline);
   font-size: 2.25rem;
@@ -168,7 +168,7 @@
   max-width: 42rem;
 }
 
-/* ===== Draft Banner ===== */
+/* Draft banner */
 .draft-banner {
   display: flex;
   align-items: center;
@@ -226,7 +226,7 @@
   color: var(--primary-container);
 }
 
-/* ===== Form Grid & Groups ===== */
+/* Form grid and groups */
 .admin-form {
   display: flex;
   flex-direction: column;
@@ -271,7 +271,7 @@
   margin-bottom: 0.25rem;
 }
 
-/* ===== Form Inputs ===== */
+/* Form inputs */
 .form-input {
   width: 100%;
   background: transparent;
@@ -319,7 +319,7 @@ select.form-input {
   margin-top: 0.25rem;
 }
 
-/* ===== Name Status Indicator ===== */
+/* Name status indicator */
 .name-field-wrapper {
   position: relative;
 }
@@ -368,7 +368,7 @@ select.form-input {
   color: var(--on-surface-variant);
 }
 
-/* ===== Editor Container ===== */
+/* Editor container */
 .editor-container {
   margin-top: 1rem;
   background-color: var(--surface-container-lowest);
@@ -398,7 +398,7 @@ select.form-input {
   color: var(--surface-dim);
 }
 
-/* ===== Sacred Imagery Section ===== */
+/* Sacred imagery section */
 .section-divider {
   display: flex;
   align-items: flex-end;
@@ -493,7 +493,7 @@ select.form-input {
   display: none;
 }
 
-/* ===== Image Card ===== */
+/* Image card */
 .image-card {
   aspect-ratio: 1/1;
   background-color: var(--surface-container);
@@ -614,7 +614,7 @@ select.form-input {
   margin-left: 0.5rem;
 }
 
-/* ===== Blob Names Preview ===== */
+/* Blob names preview */
 .blob-names-card {
   background-color: var(--surface-container-lowest);
   border-radius: 0.5rem;
@@ -643,7 +643,7 @@ select.form-input {
   font-weight: 600;
 }
 
-/* ===== Image Description List ===== */
+/* Image description list */
 .image-desc-list {
   display: flex;
   flex-direction: column;
@@ -704,7 +704,7 @@ select.form-input {
   border-bottom-color: var(--primary);
 }
 
-/* ===== Form Actions ===== */
+/* Form actions */
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -796,7 +796,7 @@ select.form-input {
   color: var(--on-surface);
 }
 
-/* ===== Back Link ===== */
+/* Back link */
 .btn-back-link {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,4 @@
-/* ===== Page Loading / Error States ===== */
+/* Page loading / error states */
 .page-loading {
   padding: 2rem;
   display: flex;
@@ -52,7 +52,7 @@
   text-decoration: underline;
 }
 
-/* ===== Confirm Modal ===== */
+/* Confirm modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -216,7 +216,7 @@
   background-color: rgba(186, 26, 26, 0.8);
 }
 
-/* ===== Navigation Blocker ===== */
+/* Navigation blocker */
 .nav-blocker-overlay {
   position: fixed;
   inset: 0;
@@ -270,7 +270,7 @@
   cursor: pointer;
 }
 
-/* ===== Confirm Modal Content ===== */
+/* Confirm modal content */
 .confirm-content {
   display: flex;
   flex-direction: column;
@@ -351,7 +351,7 @@
   font-weight: 600;
 }
 
-/* ===== Upload Progress ===== */
+/* Upload progress */
 .upload-progress {
   display: flex;
   flex-direction: column;
@@ -380,7 +380,7 @@
   animation: progressIndeterminate 1.5s ease-in-out infinite;
 }
 
-/* ===== Short Description Counter ===== */
+/* Short description counter */
 .char-counter {
   font-size: 0.625rem;
   color: var(--on-surface-variant);

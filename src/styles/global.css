@@ -1,4 +1,4 @@
-/* ===== CSS Variables (Design Tokens) ===== */
+/* CSS variables */
 :root {
   --primary: #79542e;
   --on-primary: #ffffff;
@@ -40,7 +40,7 @@
   --font-label: "Manrope", sans-serif;
 }
 
-/* ===== Global Reset ===== */
+/* Global reset */
 * {
   margin: 0;
   padding: 0;
@@ -68,7 +68,7 @@ body {
   vertical-align: middle;
 }
 
-/* ===== Utilities (kept for other pages) ===== */
+/* Utilities */
 .editorial-offset {
   margin-left: 16.66%;
 }
@@ -138,7 +138,8 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

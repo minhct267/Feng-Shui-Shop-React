@@ -110,7 +110,7 @@ export default function AddProductPage() {
         }
       }
     } catch {
-      /* ignore corrupt data */
+      /* ignore */
     }
   }, []);
 

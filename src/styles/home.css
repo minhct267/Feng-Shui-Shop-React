@@ -1,9 +1,9 @@
-/* ===== Main Content ===== */
+/* Main content */
 .main-home {
   padding-top: 80px;
 }
 
-/* ===== Hero Section ===== */
+/* Hero section */
 .hero {
   position: relative;
   height: 921px;
@@ -108,7 +108,7 @@
   background-color: var(--primary-container);
 }
 
-/* ===== Product Canvas Layout ===== */
+/* Product canvas layout */
 .container-layout {
   max-width: 1536px;
   margin: 0 auto;
@@ -124,7 +124,7 @@
   }
 }
 
-/* ===== Sidebar ===== */
+/* Sidebar */
 .sidebar {
   width: 100%;
 }
@@ -229,7 +229,7 @@
   cursor: pointer;
 }
 
-/* ===== Product Grid Section ===== */
+/* Product grid section */
 .product-section {
   flex: 1;
 }
@@ -291,7 +291,7 @@
   }
 }
 
-/* Loading & Error States */
+/* Loading and error states */
 .loading-state {
   text-align: center;
   padding: 5rem 0;
@@ -304,7 +304,7 @@
   color: var(--error);
 }
 
-/* ===== Product Card ===== */
+/* Product card */
 .product-card {
   display: flex;
   flex-direction: column;
@@ -396,7 +396,7 @@
   color: var(--on-primary);
 }
 
-/* ===== Pagination ===== */
+/* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
@@ -466,7 +466,7 @@
   padding: 0 0.25rem;
 }
 
-/* ===== Philosophy Section ===== */
+/* Philosophy section */
 .philosophy {
   background-color: var(--surface-container-highest);
   padding: 8rem 0;
