@@ -7,7 +7,7 @@ export default function HomePage() {
   return (
     <>
       <Hero />
-      <div className="max-w-screen-2xl mx-auto flex flex-col lg:flex-row py-24 px-8 gap-16">
+      <div className="container-layout">
         <Sidebar />
         <ProductGrid />
       </div>

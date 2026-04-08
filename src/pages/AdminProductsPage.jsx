@@ -18,58 +18,42 @@ export default function AdminProductsPage() {
   if (loading || !user || user.role !== "admin") return null;
 
   const sideNavLink = ({ isActive }) =>
-    `flex items-center px-6 py-3 transition-all group ${
-      isActive
-        ? "bg-stone-200 text-amber-900 font-bold rounded-r-full"
-        : "text-stone-600 hover:pl-8"
-    }`;
+    `admin-nav-link${isActive ? " active" : ""}`;
 
   return (
-    <main className="pt-20 flex min-h-screen">
-      <aside className="w-64 flex-shrink-0 bg-stone-100 flex flex-col py-8 space-y-4 border-r border-stone-200/40">
-        <div className="px-6 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary flex items-center justify-center rounded-lg">
-              <span className="material-symbols-outlined text-surface">
-                storm
-              </span>
+    <main className="admin-layout">
+      <aside className="admin-sidebar">
+        <div className="admin-sidebar-header">
+          <div className="admin-sidebar-logo-row">
+            <div className="admin-sidebar-logo">
+              <span className="material-symbols-outlined">storm</span>
             </div>
             <div>
-              <h2 className="text-lg font-headline text-stone-900">
-                Admin Portal
-              </h2>
-              <p className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold">
-                Product Lifecycle
-              </p>
+              <h2>Admin Portal</h2>
+              <p>Product Lifecycle</p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1">
+        <nav className="admin-nav">
           <NavLink to="/admin/products/add" className={sideNavLink}>
-            <span className="material-symbols-outlined mr-3">add_circle</span>
-            <span className="text-xs tracking-widest uppercase font-medium">
-              Add Product
-            </span>
+            <span className="material-symbols-outlined">add_circle</span>
+            <span>Add Product</span>
           </NavLink>
           <NavLink to="/admin/products" end className={sideNavLink}>
-            <span className="material-symbols-outlined mr-3">inventory_2</span>
-            <span className="text-xs tracking-widest uppercase font-medium">
-              Manage Products
-            </span>
+            <span className="material-symbols-outlined">inventory_2</span>
+            <span>Manage Products</span>
           </NavLink>
           {isUpdateRoute && (
-            <div className="flex items-center pl-10 pr-6 py-3 bg-stone-200 text-amber-900 font-bold rounded-r-full">
-              <span className="material-symbols-outlined mr-3 text-lg">edit_note</span>
-              <span className="text-xs tracking-widest uppercase font-medium">
-                Update Product
-              </span>
+            <div className="admin-update-indicator">
+              <span className="material-symbols-outlined">edit_note</span>
+              <span>Update Product</span>
             </div>
           )}
         </nav>
       </aside>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="admin-content">
         <Outlet />
       </div>
     </main>

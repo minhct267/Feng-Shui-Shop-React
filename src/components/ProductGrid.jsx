@@ -37,40 +37,32 @@ export default function ProductGrid() {
   }
 
   return (
-    <section className="flex-1">
-      <div className="flex justify-between items-end mb-16">
+    <section className="product-section">
+      <div className="section-header">
         <div>
-          <h2 className="text-4xl font-headline text-on-surface mb-2">
-            Curated Artifacts
-          </h2>
-          <p className="text-on-surface-variant">
-            Stones of origin, hand-picked for vibrational purity.
-          </p>
+          <h2>Curated Artifacts</h2>
+          <p>Stones of origin, hand-picked for vibrational purity.</p>
         </div>
-        <div className="flex items-center space-x-4 border-b border-outline-variant/40 pb-2">
-          <span className="font-label text-[10px] uppercase tracking-widest">
-            Sort by
+        <div className="sort-control">
+          <span>Sort by</span>
+          <span className="sort-label-active">Newest</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+            expand_more
           </span>
-          <span className="font-label text-[10px] uppercase tracking-widest text-primary font-bold">
-            Newest
-          </span>
-          <span className="material-symbols-outlined text-sm">expand_more</span>
         </div>
       </div>
 
       {loading && (
-        <div className="text-center py-20 text-on-surface-variant">
-          Loading artifacts...
-        </div>
+        <div className="loading-state">Loading artifacts...</div>
       )}
 
       {error && (
-        <div className="text-center py-20 text-error">{error}</div>
+        <div className="error-state">{error}</div>
       )}
 
       {!loading && !error && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-12 gap-y-20">
+          <div className="product-grid">
             {products.map((product, index) => (
               <ProductCard
                 key={product.ProductId}
@@ -81,16 +73,13 @@ export default function ProductGrid() {
           </div>
 
           {totalPages > 1 && (
-            <nav className="flex justify-center items-center gap-2 mt-20">
+            <nav className="pagination">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-2 rounded-md text-sm font-label tracking-wider uppercase
-                           border border-outline-variant/40 text-on-surface
-                           hover:bg-surface-variant disabled:opacity-30 disabled:cursor-not-allowed
-                           transition-colors"
+                className="page-btn-nav"
               >
-                <span className="material-symbols-outlined text-base align-middle">
+                <span className="material-symbols-outlined" style={{ fontSize: 16, verticalAlign: "middle" }}>
                   chevron_left
                 </span>
               </button>
@@ -99,13 +88,12 @@ export default function ProductGrid() {
                 <>
                   <button
                     onClick={() => setPage(1)}
-                    className="w-10 h-10 rounded-md text-sm font-label border border-outline-variant/40
-                               text-on-surface hover:bg-surface-variant transition-colors"
+                    className="page-btn"
                   >
                     1
                   </button>
                   {getPageNumbers()[0] > 2 && (
-                    <span className="text-on-surface-variant px-1">...</span>
+                    <span className="page-ellipsis">...</span>
                   )}
                 </>
               )}
@@ -114,12 +102,7 @@ export default function ProductGrid() {
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className={`w-10 h-10 rounded-md text-sm font-label transition-colors
-                    ${
-                      p === page
-                        ? "bg-primary text-on-primary font-bold"
-                        : "border border-outline-variant/40 text-on-surface hover:bg-surface-variant"
-                    }`}
+                  className={`page-btn${p === page ? " page-btn-active" : ""}`}
                 >
                   {p}
                 </button>
@@ -128,12 +111,11 @@ export default function ProductGrid() {
               {getPageNumbers().at(-1) < totalPages && (
                 <>
                   {getPageNumbers().at(-1) < totalPages - 1 && (
-                    <span className="text-on-surface-variant px-1">...</span>
+                    <span className="page-ellipsis">...</span>
                   )}
                   <button
                     onClick={() => setPage(totalPages)}
-                    className="w-10 h-10 rounded-md text-sm font-label border border-outline-variant/40
-                               text-on-surface hover:bg-surface-variant transition-colors"
+                    className="page-btn"
                   >
                     {totalPages}
                   </button>
@@ -143,12 +125,9 @@ export default function ProductGrid() {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-2 rounded-md text-sm font-label tracking-wider uppercase
-                           border border-outline-variant/40 text-on-surface
-                           hover:bg-surface-variant disabled:opacity-30 disabled:cursor-not-allowed
-                           transition-colors"
+                className="page-btn-nav"
               >
-                <span className="material-symbols-outlined text-base align-middle">
+                <span className="material-symbols-outlined" style={{ fontSize: 16, verticalAlign: "middle" }}>
                   chevron_right
                 </span>
               </button>

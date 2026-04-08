@@ -1,0 +1,161 @@
+/* ===== Header / Navigation ===== */
+.site-header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 80px;
+  z-index: 50;
+  background-color: rgba(250, 250, 249, 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(212, 196, 183, 0.2);
+}
+
+.site-header nav {
+  max-width: 1536px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+}
+
+.logo {
+  font-family: var(--font-headline);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--amber-900);
+  font-style: italic;
+  letter-spacing: -0.025em;
+  text-decoration: none;
+}
+
+.nav-links {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .nav-links {
+    display: flex;
+    gap: 3rem;
+    align-items: center;
+  }
+}
+
+.nav-link {
+  font-family: var(--font-headline);
+  text-decoration: none;
+  color: var(--stone-600);
+  letter-spacing: -0.025em;
+  transition: color 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--amber-900);
+}
+
+.nav-link.active {
+  color: var(--amber-900);
+  border-bottom: 2px solid var(--amber-900);
+  padding-bottom: 4px;
+}
+
+.nav-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-actions button {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.nav-actions button:hover {
+  background-color: rgba(245, 245, 244, 0.5);
+}
+
+.nav-actions .material-symbols-outlined {
+  color: var(--amber-900);
+}
+
+/* Header User Dropdown */
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.5rem;
+  width: 13rem;
+  background-color: var(--surface-container-lowest);
+  border: 1px solid rgba(212, 196, 183, 0.3);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem 0;
+  z-index: 50;
+}
+
+.dropdown-user-info {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(212, 196, 183, 0.2);
+}
+
+.dropdown-user-info .role-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dropdown-user-info .role-badge .material-symbols-outlined {
+  color: var(--primary);
+  font-size: 1.125rem;
+}
+
+.dropdown-user-info .role-label {
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.625rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.dropdown-user-info .username {
+  font-size: 0.875rem;
+  color: var(--on-surface);
+  margin-top: 0.25rem;
+}
+
+.dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--on-surface-variant);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dropdown-item:hover {
+  background-color: var(--surface-container-low);
+}
+
+.dropdown-item .material-symbols-outlined {
+  font-size: 1.125rem;
+}
+
+.dropdown-item .item-label {
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.625rem;
+}

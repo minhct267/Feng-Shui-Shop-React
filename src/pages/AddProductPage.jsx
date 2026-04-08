@@ -87,20 +87,18 @@ export default function AddProductPage() {
   const [draftBanner, setDraftBanner] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [dragIdx, setDragIdx] = useState(null);
-  const [nameStatus, setNameStatus] = useState("idle"); // "idle" | "checking" | "available" | "taken"
+  const [nameStatus, setNameStatus] = useState("idle");
 
   const fileInputRef = useRef(null);
   const saveTimerRef = useRef(null);
   const nameCheckRef = useRef(null);
   const nameCheckAbortRef = useRef(null);
 
-  // Load categories and promotions
   useEffect(() => {
     fetchCategories().then(setCategories).catch(() => {});
     fetchPromotions().then(setPromotions).catch(() => {});
   }, []);
 
-  // Restore draft on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
@@ -116,7 +114,6 @@ export default function AddProductPage() {
     }
   }, []);
 
-  // Auto-save draft (debounced)
   useEffect(() => {
     if (!dirty) return;
     clearTimeout(saveTimerRef.current);
@@ -130,7 +127,6 @@ export default function AddProductPage() {
     return () => clearTimeout(saveTimerRef.current);
   }, [form, dirty]);
 
-  // Debounced product name duplicate check
   useEffect(() => {
     const name = form.productName.trim();
     if (!name) {
@@ -161,7 +157,6 @@ export default function AddProductPage() {
     };
   }, [form.productName]);
 
-  // Unsaved changes: beforeunload
   useEffect(() => {
     function handler(e) {
       if (dirty && !submitSuccess) {
@@ -172,7 +167,6 @@ export default function AddProductPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty, submitSuccess]);
 
-  // Unsaved changes: React Router blocker
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       dirty && !submitSuccess && currentLocation.pathname !== nextLocation.pathname
@@ -188,7 +182,6 @@ export default function AddProductPage() {
     });
   }, []);
 
-  // --- Image handlers ---
   function addFiles(fileList) {
     const newImages = [...images];
     for (const file of fileList) {
@@ -224,12 +217,11 @@ export default function AddProductPage() {
     });
   }
 
-  // Drag-and-drop reorder
   function handleDragStart(idx) {
     setDragIdx(idx);
   }
 
-  function handleDragOver(e, idx) {
+  function handleDragOver(e) {
     e.preventDefault();
   }
 
@@ -249,7 +241,6 @@ export default function AddProductPage() {
     setDragIdx(null);
   }
 
-  // Dropzone handlers
   function handleDropZone(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -261,7 +252,6 @@ export default function AddProductPage() {
     e.stopPropagation();
   }
 
-  // --- Form submit ---
   function handleSubmit(e) {
     e.preventDefault();
     const validationErrors = validateForm(form, images, nameStatus);
@@ -331,102 +321,82 @@ export default function AddProductPage() {
     setDraftBanner(false);
   }
 
-  // Resolve category name for preview
   const selectedCategory = categories.find((c) => String(c.CategoryId) === String(form.categoryId));
 
-  const inputClass =
-    "w-full bg-transparent border-0 border-b border-outline-variant/40 focus:ring-0 focus:border-primary px-0 py-2 text-lg font-body placeholder:text-surface-dim transition-all";
-
-  const labelClass = "font-label uppercase tracking-widest text-[10px] text-on-surface-variant block mb-1";
-
-  const errorClass = "text-error text-xs mt-1";
-
   return (
-    <div className="p-8 pb-24 max-w-5xl mx-auto">
+    <div className="admin-form-container">
       {/* Live Preview Card */}
-      <div className="mb-10 flex flex-col sm:flex-row gap-6 items-start bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm border border-surface-container-high">
-        <div className="w-full sm:w-40 aspect-[4/5] sm:aspect-square bg-surface-container overflow-hidden flex-shrink-0">
+      <div className="live-preview">
+        <div className="live-preview-thumb">
           {images.length > 0 ? (
-            <img className="w-full h-full object-cover" alt="Preview" src={images[0].preview} />
+            <img alt="Preview" src={images[0].preview} />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-on-surface-variant/40">
-              <span className="material-symbols-outlined text-4xl mb-2">image</span>
-              <span className="text-xs">No Image</span>
+            <div className="live-preview-no-image">
+              <span className="material-symbols-outlined">image</span>
+              <span>No Image</span>
             </div>
           )}
         </div>
-        <div className="p-4 sm:py-5">
-          <span className="font-label uppercase tracking-widest text-[10px] text-on-surface-variant mb-1 block">
+        <div className="live-preview-info">
+          <span className="live-preview-category">
             {selectedCategory?.CategoryName || "Category"}
           </span>
-          <h3 className="font-headline text-lg text-on-surface mb-1 truncate">
+          <h3 className="live-preview-name">
             {form.productName || "Product Name"}
           </h3>
-          <p className="text-on-surface-variant text-xs font-light italic truncate">
+          <p className="live-preview-desc">
             {form.shortDescription || "Short description..."}
           </p>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="font-headline text-sm text-primary">
+          <div className="live-preview-prices">
+            <span className="live-preview-price">
               {form.price ? `$${parseFloat(form.price).toFixed(0)}` : "$0"}
             </span>
             {form.oldPrice && (
-              <span className="font-headline text-xs text-on-surface-variant line-through">
+              <span className="live-preview-old-price">
                 ${parseFloat(form.oldPrice).toFixed(0)}
               </span>
             )}
           </div>
           {form.quantity !== "" && (
-            <span className="inline-block mt-2 text-[10px] font-label uppercase tracking-widest bg-surface-container px-2 py-1 rounded text-on-surface-variant">
-              Qty: {form.quantity}
-            </span>
+            <span className="live-preview-qty">Qty: {form.quantity}</span>
           )}
         </div>
       </div>
 
-      <div className="space-y-12">
-        <header>
-          <h1 className="text-4xl md:text-5xl font-headline text-on-background leading-tight">
-            Manifest New Essence
-          </h1>
-          <p className="mt-4 text-on-surface-variant text-lg font-light leading-relaxed max-w-2xl">
+      <div className="admin-form-sections">
+        <header className="content-header">
+          <h1>Manifest New Essence</h1>
+          <p>
             Define the vessel, the price, and the ancient properties. Every entry contributes to the collective balance of the Sanctuary.
           </p>
         </header>
 
         {/* Draft restore banner */}
         {draftBanner && (
-          <div className="flex items-center justify-between bg-surface-container-high px-6 py-4 rounded-xl">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary">history</span>
-              <span className="text-sm text-on-surface">You have an unsaved draft. Restore it?</span>
+          <div className="draft-banner">
+            <div className="draft-banner-info">
+              <span className="material-symbols-outlined">history</span>
+              <span>You have an unsaved draft. Restore it?</span>
             </div>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                className="font-label uppercase tracking-widest text-[10px] text-on-surface-variant hover:text-on-background transition-colors"
-                onClick={dismissDraft}
-              >
+            <div className="draft-banner-actions">
+              <button type="button" className="draft-discard" onClick={dismissDraft}>
                 Discard
               </button>
-              <button
-                type="button"
-                className="font-label uppercase tracking-widest text-[10px] text-primary font-bold hover:text-primary-container transition-colors"
-                onClick={() => setDraftBanner(false)}
-              >
+              <button type="button" className="draft-restore" onClick={() => setDraftBanner(false)}>
                 Restore
               </button>
             </div>
           </div>
         )}
 
-        <form className="space-y-16" onSubmit={handleSubmit}>
+        <form className="admin-form" onSubmit={handleSubmit}>
           {/* Product Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-            {/* Category (first so admin picks type before naming) */}
-            <div className="space-y-2">
-              <label className={labelClass}>Category *</label>
+          <div className="form-grid">
+            {/* Category */}
+            <div className="form-group">
+              <label className="form-label">Category *</label>
               <select
-                className={inputClass + " cursor-pointer"}
+                className="form-input"
                 value={form.categoryId}
                 onChange={(e) => updateField("categoryId", e.target.value)}
               >
@@ -437,21 +407,15 @@ export default function AddProductPage() {
                   </option>
                 ))}
               </select>
-              {errors.categoryId && <p className={errorClass}>{errors.categoryId}</p>}
+              {errors.categoryId && <p className="field-error">{errors.categoryId}</p>}
             </div>
 
             {/* Product Name with duplicate check */}
-            <div className="space-y-2">
-              <label className={labelClass}>Product Name *</label>
-              <div className="relative">
+            <div className="form-group">
+              <label className="form-label">Product Name *</label>
+              <div className="name-field-wrapper">
                 <input
-                  className={`${inputClass} ${
-                    nameStatus === "available"
-                      ? "border-green-600 focus:border-green-600"
-                      : nameStatus === "taken"
-                        ? "border-error focus:border-error"
-                        : ""
-                  }`}
+                  className={`form-input${nameStatus === "available" ? " available" : ""}${nameStatus === "taken" ? " taken" : ""}`}
                   type="text"
                   placeholder="e.g. Celestial Amethyst Cluster"
                   maxLength={100}
@@ -459,41 +423,41 @@ export default function AddProductPage() {
                   onChange={(e) => updateField("productName", e.target.value)}
                 />
                 {nameStatus === "checking" && (
-                  <span className="absolute right-0 top-1/2 -translate-y-1/2 material-symbols-outlined animate-spin text-on-surface-variant text-base">
+                  <span className="material-symbols-outlined name-status-icon checking animate-spin">
                     progress_activity
                   </span>
                 )}
                 {nameStatus === "available" && (
-                  <span className="absolute right-0 top-1/2 -translate-y-1/2 material-symbols-outlined text-green-600 text-base" style={{ fontVariationSettings: '"FILL" 1' }}>
+                  <span className="material-symbols-outlined name-status-icon available" style={{ fontVariationSettings: '"FILL" 1' }}>
                     check_circle
                   </span>
                 )}
                 {nameStatus === "taken" && (
-                  <span className="absolute right-0 top-1/2 -translate-y-1/2 material-symbols-outlined text-error text-base" style={{ fontVariationSettings: '"FILL" 1' }}>
+                  <span className="material-symbols-outlined name-status-icon taken" style={{ fontVariationSettings: '"FILL" 1' }}>
                     error
                   </span>
                 )}
               </div>
-              <div className="flex items-center justify-between">
+              <div className="name-status-row">
                 {nameStatus === "available" && (
-                  <span className="text-[10px] text-green-600 font-medium">Name is available</span>
+                  <span className="name-status-msg available">Name is available</span>
                 )}
                 {nameStatus === "taken" && (
-                  <span className="text-[10px] text-error font-medium">A product with this name already exists</span>
+                  <span className="name-status-msg taken">A product with this name already exists</span>
                 )}
                 {nameStatus !== "available" && nameStatus !== "taken" && <span />}
                 {form.productName && (
-                  <span className="text-[10px] text-on-surface-variant">{form.productName.length}/100</span>
+                  <span className="name-counter">{form.productName.length}/100</span>
                 )}
               </div>
-              {errors.productName && <p className={errorClass}>{errors.productName}</p>}
+              {errors.productName && <p className="field-error">{errors.productName}</p>}
             </div>
 
             {/* Price */}
-            <div className="space-y-2">
-              <label className={labelClass}>Price (USD) *</label>
+            <div className="form-group">
+              <label className="form-label">Price (USD) *</label>
               <input
-                className={inputClass}
+                className="form-input"
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -501,14 +465,14 @@ export default function AddProductPage() {
                 value={form.price}
                 onChange={(e) => updateField("price", e.target.value)}
               />
-              {errors.price && <p className={errorClass}>{errors.price}</p>}
+              {errors.price && <p className="field-error">{errors.price}</p>}
             </div>
 
             {/* Old Price */}
-            <div className="space-y-2">
-              <label className={labelClass}>Old Price (USD)</label>
+            <div className="form-group">
+              <label className="form-label">Old Price (USD)</label>
               <input
-                className={inputClass}
+                className="form-input"
                 type="number"
                 step="0.01"
                 min="0"
@@ -516,14 +480,14 @@ export default function AddProductPage() {
                 value={form.oldPrice}
                 onChange={(e) => updateField("oldPrice", e.target.value)}
               />
-              {errors.oldPrice && <p className={errorClass}>{errors.oldPrice}</p>}
+              {errors.oldPrice && <p className="field-error">{errors.oldPrice}</p>}
             </div>
 
             {/* Quantity */}
-            <div className="space-y-2">
-              <label className={labelClass}>Quantity *</label>
+            <div className="form-group">
+              <label className="form-label">Quantity *</label>
               <input
-                className={inputClass}
+                className="form-input"
                 type="number"
                 min="0"
                 step="1"
@@ -531,14 +495,14 @@ export default function AddProductPage() {
                 value={form.quantity}
                 onChange={(e) => updateField("quantity", e.target.value)}
               />
-              {errors.quantity && <p className={errorClass}>{errors.quantity}</p>}
+              {errors.quantity && <p className="field-error">{errors.quantity}</p>}
             </div>
 
             {/* Promotion */}
-            <div className="space-y-2">
-              <label className={labelClass}>Promotion</label>
+            <div className="form-group">
+              <label className="form-label">Promotion</label>
               <select
-                className={inputClass + " cursor-pointer"}
+                className="form-input"
                 value={form.promotionId}
                 onChange={(e) => updateField("promotionId", e.target.value)}
               >
@@ -552,10 +516,10 @@ export default function AddProductPage() {
             </div>
 
             {/* Short Description */}
-            <div className="space-y-2 col-span-1 md:col-span-2">
-              <label className={labelClass}>Short Description</label>
+            <div className="form-group full-width">
+              <label className="form-label">Short Description</label>
               <input
-                className={inputClass}
+                className="form-input"
                 type="text"
                 maxLength={255}
                 placeholder="One-line summary shown on product cards"
@@ -563,17 +527,17 @@ export default function AddProductPage() {
                 onChange={(e) => updateField("shortDescription", e.target.value)}
               />
               {form.shortDescription && (
-                <span className="text-[10px] text-on-surface-variant">{form.shortDescription.length}/255</span>
+                <span className="char-counter">{form.shortDescription.length}/255</span>
               )}
-              {errors.shortDescription && <p className={errorClass}>{errors.shortDescription}</p>}
+              {errors.shortDescription && <p className="field-error">{errors.shortDescription}</p>}
             </div>
 
             {/* Detailed Description */}
-            <div className="space-y-2 col-span-1 md:col-span-2">
-              <label className={labelClass}>Detailed Description</label>
-              <div className="mt-4 bg-surface-container-lowest p-6 min-h-[200px] shadow-sm rounded-lg border-l-4 border-primary">
+            <div className="form-group full-width">
+              <label className="form-label">Detailed Description</label>
+              <div className="editor-container">
                 <textarea
-                  className="w-full bg-transparent border-0 focus:ring-0 px-0 py-0 text-on-surface-variant font-light leading-relaxed placeholder:text-surface-dim resize-none min-h-[160px]"
+                  className="editor-textarea"
                   placeholder="Describe the energy, aura, origin, and spiritual properties of the product..."
                   value={form.detailedDescription}
                   onChange={(e) => updateField("detailedDescription", e.target.value)}
@@ -583,33 +547,29 @@ export default function AddProductPage() {
           </div>
 
           {/* Sacred Imagery Section */}
-          <div className="space-y-8">
-            <div className="flex items-end gap-4">
-              <h3 className="text-3xl font-headline text-on-background">Sacred Imagery</h3>
-              <div className="flex-grow h-px bg-outline-variant/20 mb-3"></div>
+          <div className="imagery-section">
+            <div className="section-divider">
+              <h3>Sacred Imagery</h3>
+              <div className="divider-line"></div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="imagery-grid">
               {/* Dropzone */}
               <div
-                className="md:col-span-2 aspect-[4/3] md:aspect-auto flex flex-col items-center justify-center border-2 border-dashed border-outline-variant/40 rounded-2xl bg-surface-container hover:bg-surface-container-high transition-all cursor-pointer group min-h-[200px]"
+                className="dropzone"
                 onClick={() => fileInputRef.current?.click()}
                 onDrop={handleDropZone}
                 onDragOver={handleDropZoneDragOver}
               >
-                <span className="material-symbols-outlined text-5xl text-outline-variant group-hover:text-primary mb-4 transition-colors">
-                  add_a_photo
-                </span>
-                <p className="font-label uppercase tracking-widest text-[10px] text-on-surface-variant">
-                  Drag and drop or click to browse
-                </p>
-                <p className="text-[10px] text-on-surface-variant/60 mt-2">
+                <span className="material-symbols-outlined dropzone-icon">add_a_photo</span>
+                <p className="dropzone-label">Drag and drop or click to browse</p>
+                <p className="dropzone-hint">
                   JPEG, PNG, WebP &middot; Max 5 MB &middot; Up to {MAX_IMAGES} images
                 </p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  className="hidden"
+                  className="hidden-input"
                   accept=".jpg,.jpeg,.png,.webp"
                   multiple
                   onChange={(e) => {
@@ -623,31 +583,22 @@ export default function AddProductPage() {
               {images.map((img, idx) => (
                 <div
                   key={idx}
-                  className={`aspect-square bg-surface-container rounded-2xl overflow-hidden relative group cursor-grab ${
-                    dragIdx === idx ? "opacity-40" : ""
-                  }`}
+                  className={`image-card draggable${dragIdx === idx ? " dragging" : ""}`}
                   draggable
                   onDragStart={() => handleDragStart(idx)}
-                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, idx)}
                   onDragEnd={handleDragEnd}
                 >
                   <img
-                    className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500"
                     alt={img.description || `Image ${idx + 1}`}
                     src={img.preview}
                   />
-
-                  {/* Numbered badge */}
-                  <div className="absolute top-2 left-2 w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center text-xs font-bold shadow-md">
-                    {idx + 1}
-                  </div>
-
-                  {/* Hover overlay with delete */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                  <div className="image-badge">{idx + 1}</div>
+                  <div className="image-hover-overlay">
                     <button
                       type="button"
-                      className="bg-white/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/40 transition-colors"
+                      className="image-delete-btn"
                       onClick={() => removeImage(idx)}
                     >
                       <span className="material-symbols-outlined">delete</span>
@@ -658,25 +609,23 @@ export default function AddProductPage() {
             </div>
 
             {images.length > 0 && (
-              <p className="text-xs text-on-surface-variant/70 italic">
+              <p className="imagery-helper-text">
                 The first image will be used as the product thumbnail on the homepage. Drag images to reorder.
               </p>
             )}
 
             {/* Image name preview */}
             {images.length > 0 && form.productName.trim() && form.categoryId && (
-              <div className="bg-surface-container-lowest rounded-lg p-4 space-y-2">
-                <p className="text-xs font-label uppercase tracking-widest text-primary">
-                  Planned Blob Names
-                </p>
-                <div className="space-y-1">
+              <div className="blob-names-card">
+                <p className="blob-names-title">Planned Blob Names</p>
+                <div>
                   {images.map((img, idx) => {
                     const slug = safeFilename(form.productName);
                     const catSlug = CATEGORY_SLUG[selectedCategory?.CategoryName] || safeFilename(selectedCategory?.CategoryName || "");
                     const ext = img.file?.name?.split(".").pop()?.toLowerCase() || "jpg";
                     return (
-                      <p key={idx} className="text-xs text-on-surface-variant font-mono">
-                        <span className="text-on-surface font-semibold">{idx + 1}.</span>{" "}
+                      <p key={idx} className="blob-name-item">
+                        <span className="blob-name-num">{idx + 1}.</span>{" "}
                         {slug}_{catSlug}_{idx + 1}.{ext}
                       </p>
                     );
@@ -687,17 +636,13 @@ export default function AddProductPage() {
 
             {/* Per-image descriptions */}
             {images.length > 0 && (
-              <div className="space-y-4">
-                <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant">
-                  Image Descriptions (optional)
-                </p>
+              <div className="image-desc-list">
+                <p className="image-desc-title">Image Descriptions (optional)</p>
                 {images.map((img, idx) => (
-                  <div key={idx} className="flex items-center gap-4">
-                    <span className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center text-xs font-bold shrink-0">
-                      {idx + 1}
-                    </span>
+                  <div key={idx} className="image-desc-row">
+                    <span className="image-desc-badge">{idx + 1}</span>
                     <input
-                      className="flex-1 bg-transparent border-0 border-b border-outline-variant/40 focus:ring-0 focus:border-primary px-0 py-1 text-sm font-body placeholder:text-surface-dim transition-all"
+                      className="image-desc-input"
                       type="text"
                       placeholder={`Description for image ${idx + 1}`}
                       value={img.description}
@@ -708,29 +653,21 @@ export default function AddProductPage() {
               </div>
             )}
 
-            {errors.images && <p className={errorClass}>{errors.images}</p>}
+            {errors.images && <p className="field-error">{errors.images}</p>}
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-8 pt-8">
-            <button
-              type="button"
-              className="text-on-surface-variant font-label uppercase tracking-widest text-xs hover:text-on-background transition-colors"
-              onClick={handleDiscard}
-            >
+          <div className="form-actions">
+            <button type="button" className="discard-btn" onClick={handleDiscard}>
               Discard Draft
             </button>
             <button
               type="submit"
               disabled={nameStatus === "taken"}
-              className={`bg-primary text-white px-12 py-5 rounded-full font-label uppercase tracking-widest text-xs shadow-xl shadow-primary/20 transition-all flex items-center gap-3 ${
-                nameStatus === "taken"
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-primary-container"
-              }`}
+              className="submit-btn"
             >
               Curate Product
-              <span className="material-symbols-outlined text-sm">auto_awesome</span>
+              <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>auto_awesome</span>
             </button>
           </div>
         </form>
@@ -754,45 +691,41 @@ export default function AddProductPage() {
         successMessage="Product created successfully!"
         error={submitError}
       >
-        <div className="space-y-4">
-          <div className="flex items-start gap-4">
+        <div className="confirm-content">
+          <div className="confirm-preview">
             {images.length > 0 && (
-              <img
-                className="w-16 h-16 rounded-lg object-cover shrink-0"
-                src={images[0].preview}
-                alt="Preview"
-              />
+              <img className="confirm-preview-img" src={images[0].preview} alt="Preview" />
             )}
-            <div className="min-w-0">
-              <h4 className="font-headline text-lg text-on-surface truncate">{form.productName}</h4>
-              <p className="text-on-surface-variant text-sm">{selectedCategory?.CategoryName || "—"}</p>
+            <div className="confirm-preview-info">
+              <h4 className="confirm-preview-name">{form.productName}</h4>
+              <p className="confirm-preview-category">{selectedCategory?.CategoryName || "—"}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="confirm-grid">
             <div>
-              <span className="text-on-surface-variant">Price:</span>{" "}
-              <span className="text-on-surface font-semibold">${parseFloat(form.price || 0).toFixed(2)}</span>
+              <span className="confirm-label">Price: </span>
+              <span className="confirm-value">${parseFloat(form.price || 0).toFixed(2)}</span>
             </div>
             {form.oldPrice && (
               <div>
-                <span className="text-on-surface-variant">Old Price:</span>{" "}
-                <span className="text-on-surface line-through">${parseFloat(form.oldPrice).toFixed(2)}</span>
+                <span className="confirm-label">Old Price: </span>
+                <span className="confirm-value line-through">${parseFloat(form.oldPrice).toFixed(2)}</span>
               </div>
             )}
             <div>
-              <span className="text-on-surface-variant">Quantity:</span>{" "}
-              <span className="text-on-surface font-semibold">{form.quantity}</span>
+              <span className="confirm-label">Quantity: </span>
+              <span className="confirm-value">{form.quantity}</span>
             </div>
             <div>
-              <span className="text-on-surface-variant">Images:</span>{" "}
-              <span className="text-on-surface font-semibold">{images.length}</span>
+              <span className="confirm-label">Images: </span>
+              <span className="confirm-value">{images.length}</span>
             </div>
           </div>
           {uploadProgress && (
-            <div className="space-y-2">
-              <p className="text-xs text-on-surface-variant italic">{uploadProgress}</p>
-              <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full animate-[progressIndeterminate_1.5s_ease-in-out_infinite] w-1/3" />
+            <div className="upload-progress">
+              <p className="upload-progress-text">{uploadProgress}</p>
+              <div className="progress-bar-track">
+                <div className="progress-bar-fill" />
               </div>
             </div>
           )}
@@ -801,23 +734,19 @@ export default function AddProductPage() {
 
       {/* React Router navigation blocker */}
       {blocker.state === "blocked" && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
-            <h3 className="text-xl font-headline text-on-surface mb-4">Unsaved Changes</h3>
-            <p className="text-on-surface-variant text-sm mb-8">
+        <div className="nav-blocker-overlay">
+          <div className="nav-blocker-card">
+            <h3 className="nav-blocker-title">Unsaved Changes</h3>
+            <p className="nav-blocker-message">
               You have unsaved changes. Are you sure you want to leave this page?
             </p>
-            <div className="flex justify-end gap-6">
-              <button
-                type="button"
-                className="text-on-surface-variant font-label uppercase tracking-widest text-xs hover:text-on-background transition-colors"
-                onClick={() => blocker.reset()}
-              >
+            <div className="nav-blocker-actions">
+              <button type="button" className="btn-cancel-text" onClick={() => blocker.reset()}>
                 Stay
               </button>
               <button
                 type="button"
-                className="bg-error text-on-error px-8 py-3 rounded-full font-label uppercase tracking-widest text-xs"
+                className="btn-leave"
                 onClick={() => {
                   localStorage.removeItem(DRAFT_KEY);
                   blocker.proceed();

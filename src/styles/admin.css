@@ -1,0 +1,125 @@
+/* ===== Admin Layout (AdminProductsPage) ===== */
+.admin-layout {
+  padding-top: 80px;
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  width: 16rem;
+  flex-shrink: 0;
+  background-color: var(--stone-100);
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 0;
+  gap: 1rem;
+  border-right: 1px solid rgba(231, 229, 228, 0.4);
+}
+
+.admin-sidebar-header {
+  padding: 0 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.admin-sidebar-header .admin-sidebar-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-sidebar-logo {
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+}
+
+.admin-sidebar-logo .material-symbols-outlined {
+  color: var(--surface);
+}
+
+.admin-sidebar-header h2 {
+  font-family: var(--font-headline);
+  font-size: 1.125rem;
+  color: var(--stone-900);
+}
+
+.admin-sidebar-header p {
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--stone-500);
+  font-weight: 600;
+}
+
+.admin-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s;
+  text-decoration: none;
+  color: var(--stone-600);
+}
+
+.admin-nav-link .material-symbols-outlined {
+  margin-right: 0.75rem;
+}
+
+.admin-nav-link span:last-child {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.admin-nav-link:hover {
+  padding-left: 2rem;
+}
+
+.admin-nav-link.active {
+  background-color: var(--stone-200);
+  color: var(--amber-900);
+  font-weight: 700;
+  border-radius: 0 9999px 9999px 0;
+}
+
+.admin-nav-link.active:hover {
+  padding-left: 1.5rem;
+}
+
+.admin-update-indicator {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem 0.75rem 2.5rem;
+  background-color: var(--stone-200);
+  color: var(--amber-900);
+  font-weight: 700;
+  border-radius: 0 9999px 9999px 0;
+}
+
+.admin-update-indicator .material-symbols-outlined {
+  margin-right: 0.75rem;
+  font-size: 1.125rem;
+}
+
+.admin-update-indicator span:last-child {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.admin-content {
+  flex: 1;
+  overflow-y: auto;
+}

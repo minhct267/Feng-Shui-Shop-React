@@ -35,18 +35,20 @@ export default function ConfirmModal({
 
   if (success) {
     return (
-      <div
-        ref={overlayRef}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      >
-        <div className="bg-surface-container-lowest rounded-2xl shadow-2xl p-10 max-w-md w-full mx-4 text-center animate-[fadeIn_0.2s_ease-out]">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
-            <span className="material-symbols-outlined text-green-700 text-3xl" style={{ fontVariationSettings: '"FILL" 1' }}>
+      <div ref={overlayRef} className="modal-overlay">
+        <div className="modal-success-card">
+          <div className="modal-success-icon">
+            <span
+              className="material-symbols-outlined"
+              style={{ fontVariationSettings: '"FILL" 1' }}
+            >
               check_circle
             </span>
           </div>
-          <h3 className="text-2xl font-headline text-on-surface mb-2">{successMessage}</h3>
-          {successSubMessage && <p className="text-on-surface-variant text-sm">{successSubMessage}</p>}
+          <h3 className="modal-success-title">{successMessage}</h3>
+          {successSubMessage && (
+            <p className="modal-success-sub">{successSubMessage}</p>
+          )}
         </div>
       </div>
     );
@@ -55,31 +57,33 @@ export default function ConfirmModal({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="modal-overlay"
       onClick={handleOverlayClick}
     >
-      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4 animate-[fadeIn_0.2s_ease-out]">
-        <h3 className="text-2xl font-headline text-on-surface mb-6">{title}</h3>
+      <div className="modal-card">
+        <h3 className="modal-title">{title}</h3>
 
-        <div className="mb-8">{children}</div>
+        <div className="modal-body">{children}</div>
 
-        {error && (
-          <div className="mb-6 bg-error-container text-on-error-container px-4 py-3 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
+        {error && <div className="modal-error">{error}</div>}
 
         {loading && (
-          <div className="mb-6 flex items-center gap-3 text-on-surface-variant text-sm">
-            <span className={`material-symbols-outlined animate-spin ${variant === "destructive" ? "text-error" : "text-primary"}`}>progress_activity</span>
+          <div className="modal-loading">
+            <span
+              className={`material-symbols-outlined animate-spin ${
+                variant === "destructive" ? "destructive" : "primary"
+              }`}
+            >
+              progress_activity
+            </span>
             <span>{loadingMessage}</span>
           </div>
         )}
 
-        <div className="flex justify-end gap-6">
+        <div className="modal-actions">
           <button
             type="button"
-            className="text-on-surface-variant font-label uppercase tracking-widest text-xs hover:text-on-background transition-colors disabled:opacity-40"
+            className="modal-cancel-btn"
             onClick={onCancel}
             disabled={loading}
           >
@@ -87,23 +91,21 @@ export default function ConfirmModal({
           </button>
           <button
             type="button"
-            className={`px-8 py-4 rounded-full font-label uppercase tracking-widest text-xs shadow-lg transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed ${
-              variant === "destructive"
-                ? "bg-error text-on-error shadow-error/20 hover:bg-error/80"
-                : "bg-primary text-on-primary shadow-primary/20 hover:bg-primary-container"
-            }`}
+            className={`modal-confirm-btn${variant === "destructive" ? " destructive" : ""}`}
             onClick={onConfirm}
             disabled={loading}
           >
             {loading ? (
               <>
-                <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
+                <span className="material-symbols-outlined animate-spin" style={{ fontSize: "14px" }}>
+                  progress_activity
+                </span>
                 {loadingMessage}
               </>
             ) : (
               <>
                 {confirmLabel}
-                <span className="material-symbols-outlined text-sm">
+                <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>
                   {variant === "destructive" ? "delete_forever" : "auto_awesome"}
                 </span>
               </>

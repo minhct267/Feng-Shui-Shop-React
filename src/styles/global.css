@@ -1,0 +1,151 @@
+/* ===== CSS Variables (Design Tokens) ===== */
+:root {
+  --primary: #79542e;
+  --on-primary: #ffffff;
+  --primary-container: #956c44;
+  --on-primary-container: #fffbff;
+  --secondary: #50616b;
+  --on-secondary: #ffffff;
+  --secondary-container: #d1e2ee;
+  --on-secondary-container: #55656f;
+  --tertiary: #a63328;
+  --on-tertiary: #ffffff;
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --surface: #fcf9f4;
+  --on-surface: #1c1c19;
+  --surface-variant: #e5e2dd;
+  --on-surface-variant: #50453b;
+  --surface-container-low: #f6f3ee;
+  --surface-container: #f0ede8;
+  --surface-container-high: #ebe8e3;
+  --surface-container-highest: #e5e2dd;
+  --surface-container-lowest: #ffffff;
+  --surface-bright: #fcf9f4;
+  --outline: #82756a;
+  --outline-variant: #d4c4b7;
+  --amber-900: #78350f;
+  --stone-50: #fafaf9;
+  --stone-100: #f5f5f4;
+  --stone-200: #e7e5e4;
+  --stone-400: #a8a29e;
+  --stone-500: #78716c;
+  --stone-600: #57534e;
+  --stone-900: #1c1917;
+
+  --font-headline: "Noto Serif", serif;
+  --font-body: "Manrope", sans-serif;
+  --font-label: "Manrope", sans-serif;
+}
+
+/* ===== Global Reset ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--surface-container-low);
+  color: var(--on-surface);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 300,
+    "GRAD" 0,
+    "opsz" 24;
+  vertical-align: middle;
+}
+
+/* ===== Utilities (kept for other pages) ===== */
+.editorial-offset {
+  margin-left: 16.66%;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.form-underline {
+  border: none;
+  border-bottom: 1px solid rgba(212, 196, 183, 0.4);
+  border-radius: 0;
+  background: transparent;
+}
+
+.form-underline:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom: 2px solid #79542e;
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes progressIndeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d4c4b7;
+  border-radius: 10px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
