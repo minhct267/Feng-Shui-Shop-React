@@ -17,6 +17,8 @@ from models import (
     ProductCard, Category, Promotion, ProductCreateResponse, ProductUpdateResponse,
     AdminProductListItem, AdminProductListResponse, ProductImage, AdminProductDetail,
     ProductListResponse, RegisterRequest, AuthUser,
+    CustomerProductDetail, PaymentMethod, CartLineItem, CartResponse,
+    AddToCartRequest, UpdateCartItemRequest, CheckoutRequest, OrderConfirmationResponse,
 )
 from blob_storage import blob_url_for_image, upload_image, delete_blob, move_blob_to_bin
 
@@ -94,24 +96,24 @@ def _issue_auth_cookie(response: Response, username: str, role: str, account_id:
     )
 
 
-def _lookup_customer(account_id: int) -> tuple[str | None, str | None]:
-    """Return (full_name, email) for the given AccountId, or (None, None) if not found."""
+def _lookup_customer(account_id: int) -> tuple[str | None, str | None, str | None, str | None]:
+    """Return (full_name, email, phone, address) for the given AccountId."""
     try:
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT FullName, Email FROM Customers WHERE AccountId = ?",
+                "SELECT FullName, Email, Phone, Address FROM Customers WHERE AccountId = ?",
                 (account_id,),
             )
             row = cursor.fetchone()
             if not row:
-                return None, None
-            return row[0], row[1]
+                return None, None, None, None
+            return row[0], row[1], row[2], row[3]
         finally:
             conn.close()
     except Exception:
-        return None, None
+        return None, None, None, None
 
 
 @app.post("/api/login", response_model=AuthUser)
@@ -133,7 +135,8 @@ def login(body: LoginRequest, response: Response):
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT a.AccountId, a.Username, a.PasswordHash, c.FullName, c.Email
+            SELECT a.AccountId, a.Username, a.PasswordHash,
+                   c.FullName, c.Email, c.Phone, c.Address
             FROM Accounts a
             LEFT JOIN Customers c ON c.AccountId = a.AccountId
             WHERE LOWER(a.Username) = LOWER(?)
@@ -153,6 +156,8 @@ def login(body: LoginRequest, response: Response):
     stored_username = row[1]
     full_name = row[3]
     email = row[4]
+    phone = row[5]
+    address = row[6]
 
     _issue_auth_cookie(response, stored_username, "customer", account_id)
     return AuthUser(
@@ -161,6 +166,8 @@ def login(body: LoginRequest, response: Response):
         account_id=account_id,
         full_name=full_name,
         email=email,
+        phone=phone,
+        address=address,
     )
 
 
@@ -182,8 +189,10 @@ def get_current_user(request: Request):
 
     full_name: str | None = None
     email: str | None = None
+    phone: str | None = None
+    address: str | None = None
     if role == "customer" and account_id is not None:
-        full_name, email = _lookup_customer(account_id)
+        full_name, email, phone, address = _lookup_customer(account_id)
 
     return AuthUser(
         username=username,
@@ -191,6 +200,8 @@ def get_current_user(request: Request):
         account_id=account_id,
         full_name=full_name,
         email=email,
+        phone=phone,
+        address=address,
     )
 
 
@@ -213,6 +224,133 @@ def require_admin(request: Request):
     if payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return payload
+
+
+def require_customer(request: Request):
+    """Auth guard: only authenticated customers may proceed.
+
+    Admins are blocked with 403 because admin should not own carts/orders."""
+    token = request.cookies.get(COOKIE_NAME)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    if payload.get("role") != "customer":
+        raise HTTPException(status_code=403, detail="Customer access required")
+    if payload.get("account_id") is None:
+        raise HTTPException(status_code=401, detail="Invalid customer token")
+    return payload
+
+
+def _get_customer_id(cursor, account_id: int) -> int:
+    """Resolve a CustomerId from the JWT's AccountId; raise 404 if missing."""
+    cursor.execute("SELECT CustomerId FROM Customers WHERE AccountId = ?", (account_id,))
+    row = cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Customer profile not found")
+    return row[0]
+
+
+def _get_or_create_cart(cursor, customer_id: int) -> int:
+    """Return the customer's CartId, creating a new Cart row on first call."""
+    cursor.execute("SELECT CartId FROM Carts WHERE CustomerId = ?", (customer_id,))
+    row = cursor.fetchone()
+    if row:
+        return row[0]
+    cursor.execute(
+        """
+        INSERT INTO Carts (CustomerId)
+        OUTPUT INSERTED.CartId
+        VALUES (?)
+        """,
+        (customer_id,),
+    )
+    return cursor.fetchone()[0]
+
+
+def _touch_cart(cursor, cart_id: int) -> None:
+    cursor.execute(
+        "UPDATE Carts SET UpdatedDate = SYSUTCDATETIME() WHERE CartId = ?",
+        (cart_id,),
+    )
+
+
+SHIPPING_FEE = 12.00
+TAX_RATE = 0.08
+
+
+def _money(value: float) -> float:
+    return round(float(value or 0.0), 2)
+
+
+def _build_cart_response(cursor, cart_id: int) -> CartResponse:
+    """Load cart line items + totals for the given CartId."""
+    cursor.execute(
+        """
+        SELECT ci.ProductId, p.ProductName, p.Price, p.OldPrice,
+               p.Quantity AS StockAvailable, ci.Quantity,
+               c.CategoryId, c.CategoryName, pi.ImageName
+        FROM CartItems ci
+        JOIN Products p ON p.ProductId = ci.ProductId
+        JOIN ProductCategories c ON c.CategoryId = p.CategoryId
+        OUTER APPLY (
+            SELECT TOP 1 ImageName
+            FROM ProductImages
+            WHERE ProductId = ci.ProductId
+            ORDER BY ImageId
+        ) pi
+        WHERE ci.CartId = ?
+        ORDER BY ci.AddedDate
+        """,
+        (cart_id,),
+    )
+    rows = cursor.fetchall()
+
+    items: list[CartLineItem] = []
+    subtotal = 0.0
+    item_count = 0
+    has_stock_issue = False
+
+    for row in rows:
+        unit_price = float(row[2] or 0.0)
+        qty = int(row[5])
+        stock = int(row[4])
+        line_total = _money(unit_price * qty)
+        subtotal += line_total
+        item_count += qty
+        if qty > stock:
+            has_stock_issue = True
+        items.append(CartLineItem(
+            ProductId=row[0],
+            ProductName=row[1],
+            UnitPrice=unit_price,
+            OldPrice=float(row[3]) if row[3] is not None else None,
+            StockAvailable=stock,
+            Quantity=qty,
+            CategoryId=row[6],
+            CategoryName=row[7],
+            ImageUrl=blob_url_for_image(row[8]),
+            LineTotal=line_total,
+        ))
+
+    subtotal = _money(subtotal)
+    shipping = _money(SHIPPING_FEE) if subtotal > 0 else 0.0
+    tax = _money(subtotal * TAX_RATE)
+    total = _money(subtotal + shipping + tax)
+
+    return CartResponse(
+        items=items,
+        item_count=item_count,
+        subtotal=subtotal,
+        shipping_fee=shipping,
+        tax_amount=tax,
+        total=total,
+        has_stock_issue=has_stock_issue,
+    )
 
 
 @app.post("/api/register", response_model=AuthUser)
@@ -307,6 +445,8 @@ def register(body: RegisterRequest, response: Response):
         account_id=account_id,
         full_name=full_name,
         email=email,
+        phone=phone,
+        address=address,
     )
 
 
@@ -385,6 +525,95 @@ def get_promotions():
         return rows
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/products/{product_id}", response_model=CustomerProductDetail)
+def get_product_detail(product_id: int):
+    """Public product detail used by the customer-facing /products/:id page."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT p.ProductId, p.ProductName, p.Price, p.OldPrice,
+                   p.ShortDescription, p.DetailedDescription, p.Quantity,
+                   CONVERT(VARCHAR(10), p.UpdatedDate, 120) AS UpdatedDate,
+                   c.CategoryId, c.CategoryName,
+                   pr.PromotionId, pr.PromotionName, pr.Details AS PromotionDetails,
+                   CONVERT(VARCHAR(10), pr.StartDate, 120) AS PromotionStartDate,
+                   CONVERT(VARCHAR(10), pr.EndDate,   120) AS PromotionEndDate
+            FROM Products p
+            JOIN ProductCategories c ON c.CategoryId = p.CategoryId
+            LEFT JOIN Promotions pr ON pr.PromotionId = p.PromotionId
+            WHERE p.ProductId = ?
+        """, (product_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Product not found")
+
+        cursor.execute("""
+            SELECT ImageId, ImageName, ImageDescription
+            FROM ProductImages
+            WHERE ProductId = ?
+            ORDER BY ImageId
+        """, (product_id,))
+        img_rows = cursor.fetchall()
+        images = [
+            ProductImage(
+                ImageId=r[0],
+                ImageName=r[1],
+                ImageDescription=r[2],
+                ImageUrl=blob_url_for_image(r[1]),
+            )
+            for r in img_rows
+        ]
+
+        promotion_active = False
+        promo_start = row[13]
+        promo_end = row[14]
+        if row[10] is not None and promo_start and promo_end:
+            today_iso = date.today().isoformat()
+            promotion_active = promo_start <= today_iso <= promo_end
+
+        return CustomerProductDetail(
+            ProductId=row[0],
+            ProductName=row[1],
+            Price=row[2],
+            OldPrice=row[3],
+            ShortDescription=row[4],
+            DetailedDescription=row[5],
+            Quantity=int(row[6]),
+            UpdatedDate=row[7],
+            CategoryId=row[8],
+            CategoryName=row[9],
+            PromotionId=row[10],
+            PromotionName=row[11],
+            PromotionDetails=row[12],
+            PromotionStartDate=promo_start,
+            PromotionEndDate=promo_end,
+            PromotionActive=promotion_active,
+            Images=images,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/payment-methods", response_model=list[PaymentMethod])
+def get_payment_methods():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT PaymentMethodId, MethodName FROM PaymentMethods ORDER BY PaymentMethodId"
+        )
+        return [PaymentMethod(PaymentMethodId=r[0], MethodName=r[1]) for r in cursor.fetchall()]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -931,6 +1160,7 @@ def delete_admin_product(product_id: int, admin=Depends(require_admin)):
         cursor.execute("SELECT ImageName FROM ProductImages WHERE ProductId = ?", (product_id,))
         blob_names = [r[0] for r in cursor.fetchall()]
 
+        cursor.execute("DELETE FROM CartItems WHERE ProductId = ?", (product_id,))
         cursor.execute("DELETE FROM OrderDetails WHERE ProductId = ?", (product_id,))
         cursor.execute("DELETE FROM ProductImages WHERE ProductId = ?", (product_id,))
         cursor.execute("DELETE FROM Products WHERE ProductId = ?", (product_id,))
@@ -944,6 +1174,333 @@ def delete_admin_product(product_id: int, admin=Depends(require_admin)):
                 pass
 
         return {"message": "Product deleted successfully"}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+# ==================================================================
+# Customer cart endpoints (require_customer)
+# ==================================================================
+
+
+@app.get("/api/cart", response_model=CartResponse)
+def get_cart(auth=Depends(require_customer)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        customer_id = _get_customer_id(cursor, auth["account_id"])
+        cart_id = _get_or_create_cart(cursor, customer_id)
+        conn.commit()
+        return _build_cart_response(cursor, cart_id)
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/cart/items", response_model=CartResponse)
+def add_cart_item(body: AddToCartRequest, auth=Depends(require_customer)):
+    if body.quantity < 1:
+        raise HTTPException(status_code=422, detail="Quantity must be at least 1.")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        customer_id = _get_customer_id(cursor, auth["account_id"])
+        cart_id = _get_or_create_cart(cursor, customer_id)
+
+        cursor.execute(
+            "SELECT Quantity FROM Products WHERE ProductId = ?",
+            (body.product_id,),
+        )
+        prod_row = cursor.fetchone()
+        if not prod_row:
+            raise HTTPException(status_code=404, detail="Product not found.")
+        stock = int(prod_row[0])
+
+        cursor.execute(
+            "SELECT CartItemId, Quantity FROM CartItems WHERE CartId = ? AND ProductId = ?",
+            (cart_id, body.product_id),
+        )
+        existing = cursor.fetchone()
+        existing_qty = int(existing[1]) if existing else 0
+        new_qty = existing_qty + body.quantity
+
+        if new_qty > stock:
+            available = max(stock - existing_qty, 0)
+            if available <= 0:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Only {stock} in stock; you already have {existing_qty} in your cart.",
+                )
+            raise HTTPException(
+                status_code=409,
+                detail=f"Only {stock} in stock. You can add up to {available} more.",
+            )
+
+        if existing:
+            cursor.execute(
+                "UPDATE CartItems SET Quantity = ? WHERE CartItemId = ?",
+                (new_qty, existing[0]),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO CartItems (CartId, ProductId, Quantity)
+                VALUES (?, ?, ?)
+                """,
+                (cart_id, body.product_id, body.quantity),
+            )
+
+        _touch_cart(cursor, cart_id)
+        cart = _build_cart_response(cursor, cart_id)
+        conn.commit()
+        return cart
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.put("/api/cart/items/{product_id}", response_model=CartResponse)
+def update_cart_item(product_id: int, body: UpdateCartItemRequest, auth=Depends(require_customer)):
+    if body.quantity < 1:
+        raise HTTPException(status_code=422, detail="Quantity must be at least 1.")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        customer_id = _get_customer_id(cursor, auth["account_id"])
+        cart_id = _get_or_create_cart(cursor, customer_id)
+
+        cursor.execute(
+            "SELECT Quantity FROM Products WHERE ProductId = ?",
+            (product_id,),
+        )
+        prod_row = cursor.fetchone()
+        if not prod_row:
+            raise HTTPException(status_code=404, detail="Product not found.")
+        stock = int(prod_row[0])
+        if body.quantity > stock:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Only {stock} in stock for this item.",
+            )
+
+        cursor.execute(
+            "SELECT CartItemId FROM CartItems WHERE CartId = ? AND ProductId = ?",
+            (cart_id, product_id),
+        )
+        existing = cursor.fetchone()
+        if not existing:
+            raise HTTPException(status_code=404, detail="This item is not in your cart.")
+
+        cursor.execute(
+            "UPDATE CartItems SET Quantity = ? WHERE CartItemId = ?",
+            (body.quantity, existing[0]),
+        )
+        _touch_cart(cursor, cart_id)
+        cart = _build_cart_response(cursor, cart_id)
+        conn.commit()
+        return cart
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.delete("/api/cart/items/{product_id}", response_model=CartResponse)
+def remove_cart_item(product_id: int, auth=Depends(require_customer)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        customer_id = _get_customer_id(cursor, auth["account_id"])
+        cart_id = _get_or_create_cart(cursor, customer_id)
+
+        cursor.execute(
+            "DELETE FROM CartItems WHERE CartId = ? AND ProductId = ?",
+            (cart_id, product_id),
+        )
+        _touch_cart(cursor, cart_id)
+        cart = _build_cart_response(cursor, cart_id)
+        conn.commit()
+        return cart
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.delete("/api/cart", response_model=CartResponse)
+def clear_cart(auth=Depends(require_customer)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        customer_id = _get_customer_id(cursor, auth["account_id"])
+        cart_id = _get_or_create_cart(cursor, customer_id)
+        cursor.execute("DELETE FROM CartItems WHERE CartId = ?", (cart_id,))
+        _touch_cart(cursor, cart_id)
+        cart = _build_cart_response(cursor, cart_id)
+        conn.commit()
+        return cart
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/checkout", response_model=OrderConfirmationResponse)
+def checkout(body: CheckoutRequest, auth=Depends(require_customer)):
+    """Atomic checkout: re-validate stock, create Order + OrderDetails,
+    decrement Products.Quantity, clear CartItems."""
+
+    delivery_address = _sanitize_text(body.delivery_address or "")
+    if not delivery_address:
+        raise HTTPException(status_code=422, detail="Delivery address is required.")
+    if len(delivery_address) > 255:
+        raise HTTPException(status_code=422, detail="Delivery address must be at most 255 characters.")
+
+    try:
+        delivery_date = datetime.strptime(body.delivery_date, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=422, detail="Delivery date must be in YYYY-MM-DD format.")
+
+    today = date.today()
+    if delivery_date < today:
+        raise HTTPException(status_code=422, detail="Delivery date cannot be in the past.")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+
+        customer_id = _get_customer_id(cursor, auth["account_id"])
+        cart_id = _get_or_create_cart(cursor, customer_id)
+
+        cursor.execute(
+            "SELECT MethodName FROM PaymentMethods WHERE PaymentMethodId = ?",
+            (body.payment_method_id,),
+        )
+        pm_row = cursor.fetchone()
+        if not pm_row:
+            raise HTTPException(status_code=422, detail="Selected payment method does not exist.")
+        payment_method_name = pm_row[0] or "Payment"
+
+        cursor.execute(
+            """
+            SELECT ci.ProductId, ci.Quantity, p.Quantity AS Stock, p.Price, p.ProductName
+            FROM CartItems ci WITH (UPDLOCK, HOLDLOCK)
+            JOIN Products  p WITH (UPDLOCK, HOLDLOCK) ON p.ProductId = ci.ProductId
+            WHERE ci.CartId = ?
+            """,
+            (cart_id,),
+        )
+        rows = cursor.fetchall()
+        if not rows:
+            raise HTTPException(status_code=400, detail="Your cart is empty.")
+
+        out_of_stock: list[str] = []
+        for r in rows:
+            qty = int(r[1])
+            stock = int(r[2])
+            if qty > stock:
+                out_of_stock.append(f"{r[4]} (requested {qty}, only {stock} left)")
+        if out_of_stock:
+            raise HTTPException(
+                status_code=409,
+                detail="Some items are no longer in stock: " + "; ".join(out_of_stock),
+            )
+
+        subtotal = 0.0
+        item_count = 0
+        for r in rows:
+            qty = int(r[1])
+            price = float(r[3] or 0.0)
+            subtotal += price * qty
+            item_count += qty
+        subtotal = _money(subtotal)
+        shipping = _money(SHIPPING_FEE) if subtotal > 0 else 0.0
+        tax = _money(subtotal * TAX_RATE)
+        total = _money(subtotal + shipping + tax)
+
+        cursor.execute(
+            """
+            INSERT INTO Orders
+                (OrderDate, PaymentStatus, DeliveryAddress, DeliveryDate,
+                 CustomerId, PaymentMethodId)
+            OUTPUT INSERTED.OrderId
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                today.isoformat(),
+                0,
+                delivery_address,
+                delivery_date.isoformat(),
+                customer_id,
+                body.payment_method_id,
+            ),
+        )
+        order_id = cursor.fetchone()[0]
+
+        for r in rows:
+            product_id = int(r[0])
+            qty = int(r[1])
+            unit_price = float(r[3] or 0.0)
+
+            cursor.execute(
+                """
+                INSERT INTO OrderDetails (ProductId, OrderId, Quantity, UnitPrice)
+                VALUES (?, ?, ?, ?)
+                """,
+                (product_id, order_id, qty, unit_price),
+            )
+            cursor.execute(
+                "UPDATE Products SET Quantity = Quantity - ? WHERE ProductId = ?",
+                (qty, product_id),
+            )
+
+        cursor.execute("DELETE FROM CartItems WHERE CartId = ?", (cart_id,))
+        _touch_cart(cursor, cart_id)
+        conn.commit()
+
+        return OrderConfirmationResponse(
+            order_id=order_id,
+            order_date=today.isoformat(),
+            delivery_date=delivery_date.isoformat(),
+            payment_method=payment_method_name,
+            item_count=item_count,
+            subtotal=subtotal,
+            shipping_fee=shipping,
+            tax_amount=tax,
+            total=total,
+            message="Order placed successfully.",
+        )
     except HTTPException:
         conn.rollback()
         raise

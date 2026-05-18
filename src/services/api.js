@@ -133,3 +133,95 @@ export async function deleteProduct(productId) {
   }
   return res.json();
 }
+
+export async function fetchProductDetail(productId) {
+  const res = await fetch(`${API_BASE}/products/${productId}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to fetch product detail");
+  }
+  return res.json();
+}
+
+export async function fetchPaymentMethods() {
+  const res = await fetch(`${API_BASE}/payment-methods`);
+  if (!res.ok) throw new Error("Failed to fetch payment methods");
+  return res.json();
+}
+
+export async function fetchCart() {
+  const res = await fetch(`${API_BASE}/cart`, { credentials: "include" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to fetch cart");
+  }
+  return res.json();
+}
+
+export async function addCartItem(productId, quantity) {
+  const res = await fetch(`${API_BASE}/cart/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ product_id: productId, quantity }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to add to cart");
+  }
+  return res.json();
+}
+
+export async function updateCartItem(productId, quantity) {
+  const res = await fetch(`${API_BASE}/cart/items/${productId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ quantity }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to update cart item");
+  }
+  return res.json();
+}
+
+export async function removeCartItem(productId) {
+  const res = await fetch(`${API_BASE}/cart/items/${productId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to remove cart item");
+  }
+  return res.json();
+}
+
+export async function clearCart() {
+  const res = await fetch(`${API_BASE}/cart`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to clear cart");
+  }
+  return res.json();
+}
+
+export async function submitCheckout(payload) {
+  const res = await fetch(`${API_BASE}/checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const error = new Error(err.detail || "Checkout failed");
+    error.status = res.status;
+    throw error;
+  }
+  return res.json();
+}

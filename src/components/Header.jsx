@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 
 export default function Header() {
   const { user, logout } = useAuth();
+  const { count } = useCart();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -31,6 +33,8 @@ export default function Header() {
         : "text-stone-600 hover:text-amber-900"
     }`;
 
+  const isAdmin = user?.role === "admin";
+
   return (
     <header className="fixed top-0 w-full z-50 bg-stone-50/80 backdrop-blur-md">
       <nav className="flex justify-between items-center px-8 h-20 max-w-screen-2xl mx-auto">
@@ -44,7 +48,7 @@ export default function Header() {
           <NavLink to="/" className={navLinkClass} end>
             Home
           </NavLink>
-          {user?.role === "admin" ? (
+          {isAdmin ? (
             <NavLink to="/admin/products" className={navLinkClass}>
               Products
             </NavLink>
@@ -62,12 +66,28 @@ export default function Header() {
           >
             Elements
           </a>
-          <a
-            className="font-headline tracking-tight text-stone-600 hover:text-amber-900 transition-colors"
-            href="#"
-          >
-            Cart
-          </a>
+          {!isAdmin && (
+            <NavLink
+              to="/cart"
+              className={({ isActive }) =>
+                `relative font-headline tracking-tight transition-colors flex items-center gap-2 ${
+                  isActive
+                    ? "text-amber-900 border-b-2 border-amber-900 pb-1"
+                    : "text-stone-600 hover:text-amber-900"
+                }`
+              }
+            >
+              Cart
+              {count > 0 && (
+                <span
+                  aria-label={`${count} items in cart`}
+                  className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[10px] font-bold rounded-full bg-primary text-on-primary leading-none"
+                >
+                  {count > 99 ? "99+" : count}
+                </span>
+              )}
+            </NavLink>
+          )}
         </div>
 
         {/* Person icon + dropdown */}
