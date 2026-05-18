@@ -5,6 +5,7 @@ import os
 import re
 from datetime import date, datetime, timezone, timedelta
 
+import bcrypt
 import jwt
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,7 +16,7 @@ from database import get_db_connection
 from models import (
     ProductCard, Category, Promotion, ProductCreateResponse, ProductUpdateResponse,
     AdminProductListItem, AdminProductListResponse, ProductImage, AdminProductDetail,
-    ProductListResponse,
+    ProductListResponse, RegisterRequest, AuthUser,
 )
 from blob_storage import blob_url_for_image, upload_image, delete_blob, move_blob_to_bin
 
@@ -36,6 +37,15 @@ IS_PRODUCTION = ENVIRONMENT == "production"
 COOKIE_SAMESITE = "none" if IS_PRODUCTION else "lax"
 COOKIE_SECURE = IS_PRODUCTION
 
+# Usernames that cannot be registered through the public flow.
+# 'admin' is reserved for the env-based admin login.
+RESERVED_USERNAMES = {"admin"}
+
+ALLOWED_GENDERS = {"Female", "Male", "Unidentified"}
+
+USERNAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
 app = FastAPI(title="Feng Shui Shop API")
 
 app.add_middleware(
@@ -52,20 +62,27 @@ class LoginRequest(BaseModel):
     password: str
 
 
-@app.post("/api/login")
-def login(body: LoginRequest, response: Response):
-    username_ok = hmac.compare_digest(body.username, ADMIN_USERNAME)
-    password_ok = hmac.compare_digest(body.password, ADMIN_PASSWORD)
-    if not (username_ok and password_ok):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+def hash_password(plain: str) -> str:
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
+
+def verify_password(plain: str, hashed: str) -> bool:
+    if not hashed:
+        return False
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except (ValueError, TypeError):
+        return False
+
+
+def _issue_auth_cookie(response: Response, username: str, role: str, account_id: int | None) -> None:
     payload = {
-        "sub": ADMIN_USERNAME,
-        "role": "admin",
+        "sub": username,
+        "role": role,
+        "account_id": account_id,
         "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRY_HOURS),
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
@@ -75,21 +92,106 @@ def login(body: LoginRequest, response: Response):
         path="/",
         max_age=JWT_EXPIRY_HOURS * 3600,
     )
-    return {"username": ADMIN_USERNAME, "role": "admin"}
 
 
-@app.get("/api/me")
+def _lookup_customer(account_id: int) -> tuple[str | None, str | None]:
+    """Return (full_name, email) for the given AccountId, or (None, None) if not found."""
+    try:
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT FullName, Email FROM Customers WHERE AccountId = ?",
+                (account_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None, None
+            return row[0], row[1]
+        finally:
+            conn.close()
+    except Exception:
+        return None, None
+
+
+@app.post("/api/login", response_model=AuthUser)
+def login(body: LoginRequest, response: Response):
+    username = (body.username or "").strip()
+    password = body.password or ""
+
+    if not username or not password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    username_ok = hmac.compare_digest(username, ADMIN_USERNAME)
+    password_ok = hmac.compare_digest(password, ADMIN_PASSWORD)
+    if username_ok and password_ok:
+        _issue_auth_cookie(response, ADMIN_USERNAME, "admin", None)
+        return AuthUser(username=ADMIN_USERNAME, role="admin")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT a.AccountId, a.Username, a.PasswordHash, c.FullName, c.Email
+            FROM Accounts a
+            LEFT JOIN Customers c ON c.AccountId = a.AccountId
+            WHERE LOWER(a.Username) = LOWER(?)
+            """,
+            (username,),
+        )
+        row = cursor.fetchone()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+    if not row or not verify_password(password, row[2]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    account_id = row[0]
+    stored_username = row[1]
+    full_name = row[3]
+    email = row[4]
+
+    _issue_auth_cookie(response, stored_username, "customer", account_id)
+    return AuthUser(
+        username=stored_username,
+        role="customer",
+        account_id=account_id,
+        full_name=full_name,
+        email=email,
+    )
+
+
+@app.get("/api/me", response_model=AuthUser)
 def get_current_user(request: Request):
     token = request.cookies.get(COOKIE_NAME)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return {"username": payload["sub"], "role": payload["role"]}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+    username = payload.get("sub")
+    role = payload.get("role")
+    account_id = payload.get("account_id")
+
+    full_name: str | None = None
+    email: str | None = None
+    if role == "customer" and account_id is not None:
+        full_name, email = _lookup_customer(account_id)
+
+    return AuthUser(
+        username=username,
+        role=role,
+        account_id=account_id,
+        full_name=full_name,
+        email=email,
+    )
 
 
 @app.post("/api/logout")
@@ -111,6 +213,101 @@ def require_admin(request: Request):
     if payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return payload
+
+
+@app.post("/api/register", response_model=AuthUser)
+def register(body: RegisterRequest, response: Response):
+    username = (body.username or "").strip()
+    password = body.password or ""
+    full_name = (body.full_name or "").strip()
+    email = (body.email or "").strip() or None
+    phone = (body.phone or "").strip()
+    gender = (body.gender or "").strip()
+    address = (body.address or "").strip()
+
+    if not (3 <= len(username) <= 50):
+        raise HTTPException(status_code=422, detail="Username must be between 3 and 50 characters.")
+    if not USERNAME_RE.match(username):
+        raise HTTPException(status_code=422, detail="Username may only contain letters, numbers, '.', '_' or '-'.")
+    if username.lower() in RESERVED_USERNAMES:
+        raise HTTPException(status_code=400, detail="This username is reserved. Please choose another.")
+
+    if len(password) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters long.")
+    if len(password) > 128:
+        raise HTTPException(status_code=422, detail="Password must be at most 128 characters long.")
+
+    if not full_name:
+        raise HTTPException(status_code=422, detail="Full name is required.")
+    if len(full_name) > 250:
+        raise HTTPException(status_code=422, detail="Full name must be at most 250 characters.")
+    full_name = _sanitize_text(full_name)
+
+    if email is not None:
+        if len(email) > 255 or not EMAIL_RE.match(email):
+            raise HTTPException(status_code=422, detail="Email address is invalid.")
+
+    if not phone:
+        raise HTTPException(status_code=422, detail="Phone number is required.")
+    if len(phone) > 50:
+        raise HTTPException(status_code=422, detail="Phone number must be at most 50 characters.")
+    phone = _sanitize_text(phone)
+
+    if gender not in ALLOWED_GENDERS:
+        raise HTTPException(status_code=422, detail="Gender must be Female, Male, or Unidentified.")
+
+    if not address:
+        raise HTTPException(status_code=422, detail="Address is required.")
+    address = _sanitize_text(address)
+
+    password_hash = hash_password(password)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT 1 FROM Accounts WHERE LOWER(Username) = LOWER(?)",
+            (username,),
+        )
+        if cursor.fetchone():
+            raise HTTPException(status_code=409, detail="Username already exists.")
+
+        cursor.execute(
+            """
+            INSERT INTO Accounts (Username, PasswordHash)
+            OUTPUT INSERTED.AccountId
+            VALUES (?, ?)
+            """,
+            (username, password_hash),
+        )
+        account_id = cursor.fetchone()[0]
+
+        cursor.execute(
+            """
+            INSERT INTO Customers (FullName, Gender, Address, Phone, Email, AccountId)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (full_name, gender, address, phone, email, account_id),
+        )
+
+        conn.commit()
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+    _issue_auth_cookie(response, username, "customer", account_id)
+    return AuthUser(
+        username=username,
+        role="customer",
+        account_id=account_id,
+        full_name=full_name,
+        email=email,
+    )
 
 
 @app.get("/api/products", response_model=ProductListResponse)

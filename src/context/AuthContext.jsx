@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { loginUser, fetchCurrentUser, logoutUser } from "../services/api";
+import {
+  loginUser,
+  fetchCurrentUser,
+  logoutUser,
+  registerUser,
+} from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -20,13 +25,19 @@ export function AuthProvider({ children }) {
     return data;
   }
 
+  async function register(payload) {
+    const data = await registerUser(payload);
+    setUser(data);
+    return data;
+  }
+
   async function logout() {
     await logoutUser();
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

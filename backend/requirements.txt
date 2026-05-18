@@ -6,3 +6,4 @@ azure-storage-blob
 azure-identity
 pyjwt
 python-multipart
+bcrypt

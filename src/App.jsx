@@ -4,6 +4,7 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import AdminProductsPage from './pages/AdminProductsPage'
 import AddProductPage from './pages/AddProductPage'
 import UpdateProductPage from './pages/UpdateProductPage'
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <main className="pt-20"><HomePage /></main> },
       { path: '/login', element: <LoginPage /> },
+      { path: '/register', element: <RegisterPage /> },
       {
         path: '/admin/products',
         element: <AdminProductsPage />,

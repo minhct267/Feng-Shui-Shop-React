@@ -2,6 +2,24 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    email: Optional[str] = None
+    phone: str
+    gender: str
+    address: str
+
+
+class AuthUser(BaseModel):
+    username: str
+    role: str
+    account_id: Optional[int] = None
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+
+
 class ProductCard(BaseModel):
     ProductId: int
     ProductName: str

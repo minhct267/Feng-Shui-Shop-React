@@ -27,6 +27,20 @@ export async function loginUser(username, password) {
   return res.json();
 }
 
+export async function registerUser(payload) {
+  const res = await fetch(`${API_BASE}/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Registration failed");
+  }
+  return res.json();
+}
+
 export async function fetchCurrentUser() {
   const res = await fetch(`${API_BASE}/me`, { credentials: "include" });
   if (!res.ok) return null;
