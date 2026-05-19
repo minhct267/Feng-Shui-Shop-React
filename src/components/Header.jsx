@@ -49,8 +49,8 @@ export default function Header() {
             Home
           </NavLink>
           {isAdmin ? (
-            <NavLink to="/admin/products" className={navLinkClass}>
-              Products
+            <NavLink to="/admin" className={navLinkClass}>
+              Admin
             </NavLink>
           ) : (
             <a

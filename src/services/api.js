@@ -86,8 +86,23 @@ export async function createProduct(formData) {
   return res.json();
 }
 
-export async function fetchAdminProducts(search = "", page = 1, pageSize = 10) {
-  const params = new URLSearchParams({ search, page, page_size: pageSize });
+export async function fetchAdminProducts(
+  search = "",
+  page = 1,
+  pageSize = 10,
+  options = {},
+) {
+  const { categoryId = null, lowStock = false, sort = "id" } = options;
+  const params = new URLSearchParams({
+    search,
+    page: String(page),
+    page_size: String(pageSize),
+    sort,
+  });
+  if (categoryId != null && categoryId !== "") {
+    params.set("category_id", String(categoryId));
+  }
+  if (lowStock) params.set("low_stock", "true");
   const res = await fetch(`${API_BASE}/admin/products/list?${params}`, {
     credentials: "include",
   });

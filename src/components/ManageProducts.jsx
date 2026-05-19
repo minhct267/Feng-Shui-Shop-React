@@ -1,13 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   fetchAdminProducts,
   fetchAdminProductDetail,
   deleteProduct,
+  fetchCategories,
 } from "../services/api";
 import ConfirmModal from "./ConfirmModal";
 
 const PAGE_SIZE = 10;
+
+const SORT_OPTIONS = [
+  { value: "id", label: "Default" },
+  { value: "updated_desc", label: "Recently updated" },
+  { value: "name", label: "Name (A–Z)" },
+  { value: "price_asc", label: "Price (low → high)" },
+  { value: "price_desc", label: "Price (high → low)" },
+  { value: "stock_asc", label: "Stock (low → high)" },
+  { value: "stock_desc", label: "Stock (high → low)" },
+];
 
 export default function ManageProducts() {
   const navigate = useNavigate();
@@ -16,6 +27,10 @@ export default function ManageProducts() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [lowStock, setLowStock] = useState(false);
+  const [sort, setSort] = useState("id");
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -30,10 +45,24 @@ export default function ManageProducts() {
   const searchTimerRef = useRef(null);
   const previewRef = useRef(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchCategories()
+      .then((data) => !cancelled && setCategories(data))
+      .catch(() => !cancelled && setCategories([]));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchAdminProducts(search, page, PAGE_SIZE);
+      const data = await fetchAdminProducts(search, page, PAGE_SIZE, {
+        categoryId,
+        lowStock,
+        sort,
+      });
       setProducts(data.items);
       setTotal(data.total);
     } catch {
@@ -42,7 +71,7 @@ export default function ManageProducts() {
     } finally {
       setLoading(false);
     }
-  }, [search, page]);
+  }, [search, page, categoryId, lowStock, sort]);
 
   useEffect(() => {
     loadProducts();
@@ -128,7 +157,7 @@ export default function ManageProducts() {
   return (
     <div className="p-8 custom-scrollbar">
       {/* Header */}
-      <div className="mb-8 flex justify-between items-end flex-wrap gap-4">
+      <div className="mb-6 flex justify-between items-end flex-wrap gap-4">
         <div>
           <h1 className="text-4xl font-headline text-on-surface mb-2">
             Manage Products
@@ -151,7 +180,91 @@ export default function ManageProducts() {
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
+          <Link
+            to="/admin/products/add"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-on-primary py-2.5 px-5 rounded-full font-label uppercase tracking-widest text-[10px] shadow hover:shadow-md transition-all"
+          >
+            <span className="material-symbols-outlined text-base">add</span>
+            Add Product
+          </Link>
         </div>
+      </div>
+
+      {/* Filter row */}
+      <div className="mb-6 bg-surface-container-lowest rounded-xl p-4 border border-surface-container-high flex flex-wrap items-end gap-6">
+        <div className="min-w-[180px]">
+          <label className="font-label uppercase tracking-widest text-[10px] text-outline block mb-1">
+            Category
+          </label>
+          <select
+            value={categoryId}
+            onChange={(e) => {
+              setCategoryId(e.target.value);
+              setPage(1);
+              setSelectedId(null);
+            }}
+            className="w-full bg-transparent border-b border-outline-variant/40 py-2 text-sm focus:border-primary outline-none"
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c.CategoryId} value={c.CategoryId}>
+                {c.CategoryName}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="min-w-[200px]">
+          <label className="font-label uppercase tracking-widest text-[10px] text-outline block mb-1">
+            Sort by
+          </label>
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value);
+              setPage(1);
+            }}
+            className="w-full bg-transparent border-b border-outline-variant/40 py-2 text-sm focus:border-primary outline-none"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={lowStock}
+            onChange={(e) => {
+              setLowStock(e.target.checked);
+              setPage(1);
+              setSelectedId(null);
+            }}
+            className="w-4 h-4 accent-primary"
+          />
+          <span className="font-label uppercase tracking-widest text-[10px] text-outline">
+            Low stock only (≤ 5)
+          </span>
+        </label>
+        {(categoryId || lowStock || sort !== "id" || search) && (
+          <button
+            type="button"
+            onClick={() => {
+              setCategoryId("");
+              setLowStock(false);
+              setSort("id");
+              setSearchInput("");
+              setSearch("");
+              setPage(1);
+              setSelectedId(null);
+            }}
+            className="ml-auto text-[10px] uppercase tracking-widest font-bold text-outline hover:text-primary flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-sm">clear</span>
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Product Table */}
@@ -231,6 +344,7 @@ export default function ManageProducts() {
                               alt={p.ProductName}
                               className="w-full h-full object-cover"
                               src={p.ImageUrl}
+                              loading="lazy"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-on-surface-variant/30">
@@ -263,8 +377,21 @@ export default function ManageProducts() {
                     >
                       {p.Price != null ? `$${p.Price.toFixed(2)}` : "--"}
                     </td>
-                    <td className="px-6 py-4 text-right font-label text-on-surface-variant">
-                      {p.Quantity}
+                    <td className="px-6 py-4 text-right">
+                      <div className="inline-flex items-center gap-2">
+                        {p.Quantity === 0 ? (
+                          <span className="px-2 py-0.5 text-[9px] font-label uppercase tracking-widest rounded-full bg-error-container text-on-error-container">
+                            Out of stock
+                          </span>
+                        ) : p.Quantity <= 5 ? (
+                          <span className="px-2 py-0.5 text-[9px] font-label uppercase tracking-widest rounded-full bg-tertiary-container text-on-tertiary-container">
+                            Low
+                          </span>
+                        ) : null}
+                        <span className="font-label text-on-surface-variant tabular-nums">
+                          {p.Quantity}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 );

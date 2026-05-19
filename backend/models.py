@@ -177,3 +177,198 @@ class OrderConfirmationResponse(BaseModel):
     tax_amount: float
     total: float
     message: str
+
+
+class DashboardTopProduct(BaseModel):
+    ProductId: int
+    ProductName: str
+    ImageUrl: Optional[str] = None
+    units_sold: int
+    revenue: float
+
+
+class DashboardRecentOrder(BaseModel):
+    OrderId: int
+    OrderDate: str
+    CustomerFullName: str
+    total: float
+    PaymentStatus: bool
+
+
+class DashboardRecentFeedback(BaseModel):
+    FeedbackId: int
+    FullName: str
+    TopicName: str
+    FeedbackDate: str
+    Snippet: str
+
+
+class AdminOrderListItem(BaseModel):
+    OrderId: int
+    OrderDate: str
+    DeliveryDate: str
+    CustomerId: int
+    CustomerFullName: str
+    PaymentMethodName: Optional[str] = None
+    PaymentStatus: bool
+    item_count: int
+    total: float
+
+
+class AdminOrderListResponse(BaseModel):
+    items: list[AdminOrderListItem] = []
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminOrderItem(BaseModel):
+    ProductId: int
+    ProductName: str
+    CategoryName: Optional[str] = None
+    ImageUrl: Optional[str] = None
+    UnitPrice: float
+    Quantity: int
+    LineTotal: float
+
+
+class AdminOrderCustomer(BaseModel):
+    CustomerId: int
+    FullName: str
+    Gender: Optional[str] = None
+    Email: Optional[str] = None
+    Phone: Optional[str] = None
+    Address: Optional[str] = None
+
+
+class AdminOrderDetail(BaseModel):
+    OrderId: int
+    OrderDate: str
+    DeliveryDate: str
+    DeliveryAddress: str
+    PaymentStatus: bool
+    PaymentMethodId: int
+    PaymentMethodName: Optional[str] = None
+    customer: AdminOrderCustomer
+    items: list[AdminOrderItem] = []
+    item_count: int
+    subtotal: float
+    shipping_fee: float
+    tax_amount: float
+    total: float
+
+
+class UpdatePaymentStatusRequest(BaseModel):
+    paid: bool
+
+
+class AdminPromotion(BaseModel):
+    PromotionId: int
+    PromotionName: str
+    Details: str
+    StartDate: str
+    EndDate: str
+    status: str  # 'upcoming' | 'active' | 'expired'
+    linked_product_count: int
+
+
+class PromotionPayload(BaseModel):
+    PromotionName: str
+    Details: str
+    StartDate: str  # ISO yyyy-mm-dd
+    EndDate: str    # ISO yyyy-mm-dd
+
+
+class AdminCategory(BaseModel):
+    CategoryId: int
+    CategoryName: str
+    Description: Optional[str] = None
+    product_count: int
+
+
+class CategoryDescriptionPayload(BaseModel):
+    Description: Optional[str] = None
+
+
+class AdminCustomerListItem(BaseModel):
+    CustomerId: int
+    AccountId: int
+    Username: Optional[str] = None
+    FullName: str
+    Gender: Optional[str] = None
+    Email: Optional[str] = None
+    Phone: Optional[str] = None
+    DateOfBirth: Optional[str] = None
+    order_count: int
+    total_spend: float
+
+
+class AdminCustomerListResponse(BaseModel):
+    items: list[AdminCustomerListItem] = []
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminCustomerOrderSummary(BaseModel):
+    OrderId: int
+    OrderDate: str
+    DeliveryDate: str
+    PaymentStatus: bool
+    item_count: int
+    total: float
+
+
+class AdminCustomerDetail(BaseModel):
+    CustomerId: int
+    AccountId: int
+    Username: Optional[str] = None
+    AvatarUrl: Optional[str] = None
+    FullName: str
+    Gender: Optional[str] = None
+    Email: Optional[str] = None
+    Phone: Optional[str] = None
+    Address: Optional[str] = None
+    DateOfBirth: Optional[str] = None
+    order_count: int
+    total_spend: float
+    orders: list[AdminCustomerOrderSummary] = []
+
+
+class AdminFeedbackTopic(BaseModel):
+    TopicId: int
+    TopicName: str
+
+
+class AdminFeedbackItem(BaseModel):
+    FeedbackId: int
+    FullName: str
+    Address: Optional[str] = None
+    Phone: Optional[str] = None
+    Email: Optional[str] = None
+    ReferralSource: Optional[str] = None
+    HasTransaction: bool
+    Content: str
+    FeedbackDate: str
+    TopicId: int
+    TopicName: str
+
+
+class AdminFeedbackResponse(BaseModel):
+    items: list[AdminFeedbackItem] = []
+    total: int
+    page: int
+    page_size: int
+
+
+class DashboardResponse(BaseModel):
+    revenue_30d: float
+    revenue_total: float
+    orders_30d: int
+    orders_total: int
+    aov: float
+    low_stock_count: int
+    unpaid_orders_count: int
+    top_products: list[DashboardTopProduct] = []
+    recent_orders: list[DashboardRecentOrder] = []
+    recent_feedback: list[DashboardRecentFeedback] = []

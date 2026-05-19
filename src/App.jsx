@@ -8,10 +8,19 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ProductDetailPage from './pages/ProductDetailPage'
 import CartPage from './pages/CartPage'
-import AdminProductsPage from './pages/AdminProductsPage'
 import AddProductPage from './pages/AddProductPage'
 import UpdateProductPage from './pages/UpdateProductPage'
 import ManageProducts from './components/ManageProducts'
+import AdminLayout from './pages/admin/AdminLayout'
+import AdminDashboardPage from './pages/admin/AdminDashboardPage'
+import AdminOrdersPage from './pages/admin/AdminOrdersPage'
+import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage'
+import AdminPromotionsPage from './pages/admin/AdminPromotionsPage'
+import AdminPromotionFormPage from './pages/admin/AdminPromotionFormPage'
+import AdminCategoriesPage from './pages/admin/AdminCategoriesPage'
+import AdminCustomersPage from './pages/admin/AdminCustomersPage'
+import AdminCustomerDetailPage from './pages/admin/AdminCustomerDetailPage'
+import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
 
 function Layout() {
   return (
@@ -35,12 +44,22 @@ const router = createBrowserRouter([
       { path: '/products/:productId', element: <main className="pt-20"><ProductDetailPage /></main> },
       { path: '/cart', element: <main className="pt-20"><CartPage /></main> },
       {
-        path: '/admin/products',
-        element: <AdminProductsPage />,
+        path: '/admin',
+        element: <AdminLayout />,
         children: [
-          { index: true, element: <ManageProducts /> },
-          { path: 'add', element: <AddProductPage /> },
-          { path: 'update/:productId', element: <UpdateProductPage /> },
+          { index: true, element: <AdminDashboardPage /> },
+          { path: 'orders', element: <AdminOrdersPage /> },
+          { path: 'orders/:orderId', element: <AdminOrderDetailPage /> },
+          { path: 'products', element: <ManageProducts /> },
+          { path: 'products/add', element: <AddProductPage /> },
+          { path: 'products/update/:productId', element: <UpdateProductPage /> },
+          { path: 'promotions', element: <AdminPromotionsPage /> },
+          { path: 'promotions/new', element: <AdminPromotionFormPage /> },
+          { path: 'promotions/:promotionId', element: <AdminPromotionFormPage /> },
+          { path: 'categories', element: <AdminCategoriesPage /> },
+          { path: 'customers', element: <AdminCustomersPage /> },
+          { path: 'customers/:customerId', element: <AdminCustomerDetailPage /> },
+          { path: 'feedback', element: <AdminFeedbackPage /> },
         ],
       },
     ],

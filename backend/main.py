@@ -19,6 +19,14 @@ from models import (
     ProductListResponse, RegisterRequest, AuthUser,
     CustomerProductDetail, PaymentMethod, CartLineItem, CartResponse,
     AddToCartRequest, UpdateCartItemRequest, CheckoutRequest, OrderConfirmationResponse,
+    DashboardResponse, DashboardTopProduct, DashboardRecentOrder, DashboardRecentFeedback,
+    AdminOrderListItem, AdminOrderListResponse, AdminOrderItem, AdminOrderCustomer,
+    AdminOrderDetail, UpdatePaymentStatusRequest,
+    AdminPromotion, PromotionPayload,
+    AdminCategory, CategoryDescriptionPayload,
+    AdminCustomerListItem, AdminCustomerListResponse,
+    AdminCustomerOrderSummary, AdminCustomerDetail,
+    AdminFeedbackTopic, AdminFeedbackItem, AdminFeedbackResponse,
 )
 from blob_storage import blob_url_for_image, upload_image, delete_blob, move_blob_to_bin
 
@@ -817,11 +825,25 @@ async def create_product(
         conn.close()
 
 
+_ADMIN_PRODUCT_SORT_MAP = {
+    "id": "p.ProductId",
+    "name": "p.ProductName",
+    "price_asc": "p.Price ASC, p.ProductId",
+    "price_desc": "p.Price DESC, p.ProductId",
+    "stock_asc": "p.Quantity ASC, p.ProductId",
+    "stock_desc": "p.Quantity DESC, p.ProductId",
+    "updated_desc": "p.UpdatedDate DESC, p.ProductId DESC",
+}
+
+
 @app.get("/api/admin/products/list", response_model=AdminProductListResponse)
 def list_admin_products(
     search: str = "",
     page: int = 1,
     page_size: int = 10,
+    category_id: int | None = None,
+    low_stock: bool = False,
+    sort: str = "id",
     admin=Depends(require_admin),
 ):
     if page < 1:
@@ -829,50 +851,52 @@ def list_admin_products(
     if page_size < 1 or page_size > 50:
         page_size = 10
 
-    search = search.strip()
+    search = (search or "").strip()
+    sort_clause = _ADMIN_PRODUCT_SORT_MAP.get(sort, _ADMIN_PRODUCT_SORT_MAP["id"])
+
+    where_clauses: list[str] = []
+    params: list = []
+    if search:
+        where_clauses.append("p.ProductName LIKE ?")
+        params.append(f"%{search}%")
+    if category_id is not None:
+        where_clauses.append("p.CategoryId = ?")
+        params.append(category_id)
+    if low_stock:
+        where_clauses.append("p.Quantity <= 5")
+
+    where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
     offset = (page - 1) * page_size
 
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
 
-        if search:
-            count_sql = """
-                SELECT COUNT(*) FROM Products p
-                JOIN ProductCategories c ON p.CategoryId = c.CategoryId
-                WHERE p.ProductName LIKE ?
-            """
-            cursor.execute(count_sql, (f"%{search}%",))
-        else:
-            cursor.execute("SELECT COUNT(*) FROM Products")
+        cursor.execute(
+            f"""
+            SELECT COUNT(*) FROM Products p
+            JOIN ProductCategories c ON p.CategoryId = c.CategoryId
+            {where_sql}
+            """,
+            params,
+        )
+        total = int(cursor.fetchone()[0])
 
-        total = cursor.fetchone()[0]
-
-        if search:
-            data_sql = """
-                SELECT p.ProductId, p.ProductName, p.Price, p.Quantity,
-                       c.CategoryName, pi.ImageName
-                FROM Products p
-                JOIN ProductCategories c ON p.CategoryId = c.CategoryId
-                LEFT JOIN ProductImages pi ON p.ProductId = pi.ProductId
-                     AND pi.ImageName LIKE '%[_]1.%'
-                WHERE p.ProductName LIKE ?
-                ORDER BY p.ProductId
-                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-            """
-            cursor.execute(data_sql, (f"%{search}%", offset, page_size))
-        else:
-            data_sql = """
-                SELECT p.ProductId, p.ProductName, p.Price, p.Quantity,
-                       c.CategoryName, pi.ImageName
-                FROM Products p
-                JOIN ProductCategories c ON p.CategoryId = c.CategoryId
-                LEFT JOIN ProductImages pi ON p.ProductId = pi.ProductId
-                     AND pi.ImageName LIKE '%[_]1.%'
-                ORDER BY p.ProductId
-                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-            """
-            cursor.execute(data_sql, (offset, page_size))
+        cursor.execute(
+            f"""
+            SELECT p.ProductId, p.ProductName, p.Price, p.Quantity,
+                   c.CategoryName, pi.ImageName
+            FROM Products p
+            JOIN ProductCategories c ON p.CategoryId = c.CategoryId
+            LEFT JOIN ProductImages pi ON p.ProductId = pi.ProductId
+                 AND pi.ImageName LIKE '%[_]1.%'
+            {where_sql}
+            ORDER BY {sort_clause}
+            OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            """,
+            params + [offset, page_size],
+        )
 
         columns = [col[0] for col in cursor.description]
         rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
@@ -1506,6 +1530,931 @@ def checkout(body: CheckoutRequest, auth=Depends(require_customer)):
         raise
     except Exception as e:
         conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+# ==================================================================
+# Admin dashboard endpoint (require_admin)
+# ==================================================================
+
+
+@app.get("/api/admin/dashboard", response_model=DashboardResponse)
+def get_admin_dashboard(admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+              ISNULL(SUM(CASE WHEN o.OrderDate >= DATEADD(day, -30, CAST(GETDATE() AS DATE))
+                              THEN od.Quantity * od.UnitPrice ELSE 0 END), 0) AS revenue_30d,
+              ISNULL(SUM(od.Quantity * od.UnitPrice), 0) AS revenue_total
+            FROM OrderDetails od
+            JOIN Orders o ON o.OrderId = od.OrderId
+            """
+        )
+        rev_row = cursor.fetchone()
+        revenue_30d = _money(rev_row[0])
+        revenue_total = _money(rev_row[1])
+
+        cursor.execute(
+            """
+            SELECT
+              ISNULL(SUM(CASE WHEN OrderDate >= DATEADD(day, -30, CAST(GETDATE() AS DATE))
+                              THEN 1 ELSE 0 END), 0) AS orders_30d,
+              COUNT(*) AS orders_total,
+              ISNULL(SUM(CASE WHEN PaymentStatus = 0 THEN 1 ELSE 0 END), 0) AS unpaid_count
+            FROM Orders
+            """
+        )
+        orders_row = cursor.fetchone()
+        orders_30d = int(orders_row[0])
+        orders_total = int(orders_row[1])
+        unpaid_orders_count = int(orders_row[2])
+
+        aov = _money(revenue_total / orders_total) if orders_total > 0 else 0.0
+
+        cursor.execute("SELECT COUNT(*) FROM Products WHERE Quantity <= 5")
+        low_stock_count = int(cursor.fetchone()[0])
+
+        cursor.execute(
+            """
+            SELECT TOP 5 p.ProductId, p.ProductName,
+                   SUM(od.Quantity) AS units_sold,
+                   SUM(od.Quantity * od.UnitPrice) AS revenue,
+                   pi.ImageName
+            FROM OrderDetails od
+            JOIN Products p ON p.ProductId = od.ProductId
+            OUTER APPLY (
+                SELECT TOP 1 ImageName FROM ProductImages
+                WHERE ProductId = p.ProductId ORDER BY ImageId
+            ) pi
+            GROUP BY p.ProductId, p.ProductName, pi.ImageName
+            ORDER BY units_sold DESC
+            """
+        )
+        top_products = [
+            DashboardTopProduct(
+                ProductId=r[0],
+                ProductName=r[1],
+                units_sold=int(r[2] or 0),
+                revenue=_money(r[3]),
+                ImageUrl=blob_url_for_image(r[4]),
+            )
+            for r in cursor.fetchall()
+        ]
+
+        cursor.execute(
+            """
+            SELECT TOP 5 o.OrderId,
+                   CONVERT(VARCHAR(10), o.OrderDate, 120) AS OrderDate,
+                   c.FullName,
+                   ISNULL(SUM(od.Quantity * od.UnitPrice), 0) AS total,
+                   o.PaymentStatus
+            FROM Orders o
+            JOIN Customers c ON c.CustomerId = o.CustomerId
+            LEFT JOIN OrderDetails od ON od.OrderId = o.OrderId
+            GROUP BY o.OrderId, o.OrderDate, c.FullName, o.PaymentStatus
+            ORDER BY o.OrderDate DESC, o.OrderId DESC
+            """
+        )
+        recent_orders = [
+            DashboardRecentOrder(
+                OrderId=r[0],
+                OrderDate=r[1],
+                CustomerFullName=r[2],
+                total=_money(r[3]),
+                PaymentStatus=bool(r[4]),
+            )
+            for r in cursor.fetchall()
+        ]
+
+        cursor.execute(
+            """
+            SELECT TOP 6 f.FeedbackId, f.FullName, ft.TopicName,
+                   CONVERT(VARCHAR(10), f.FeedbackDate, 120) AS FeedbackDate,
+                   f.Content
+            FROM Feedbacks f
+            JOIN FeedbackTopics ft ON ft.TopicId = f.TopicId
+            ORDER BY f.FeedbackDate DESC, f.FeedbackId DESC
+            """
+        )
+        recent_feedback = []
+        for r in cursor.fetchall():
+            content = r[4] or ""
+            snippet = content if len(content) <= 160 else content[:157].rstrip() + "..."
+            recent_feedback.append(
+                DashboardRecentFeedback(
+                    FeedbackId=r[0],
+                    FullName=r[1],
+                    TopicName=r[2],
+                    FeedbackDate=r[3],
+                    Snippet=snippet,
+                )
+            )
+
+        return DashboardResponse(
+            revenue_30d=revenue_30d,
+            revenue_total=revenue_total,
+            orders_30d=orders_30d,
+            orders_total=orders_total,
+            aov=aov,
+            low_stock_count=low_stock_count,
+            unpaid_orders_count=unpaid_orders_count,
+            top_products=top_products,
+            recent_orders=recent_orders,
+            recent_feedback=recent_feedback,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+# ==================================================================
+# Admin orders endpoints (require_admin)
+# ==================================================================
+
+
+@app.get("/api/admin/orders", response_model=AdminOrderListResponse)
+def list_admin_orders(
+    search: str = "",
+    payment_status: str = "all",
+    date_from: str | None = None,
+    date_to: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
+    admin=Depends(require_admin),
+):
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 50:
+        page_size = 20
+
+    payment_status = (payment_status or "all").strip().lower()
+    if payment_status not in {"all", "paid", "unpaid"}:
+        payment_status = "all"
+
+    where_clauses: list[str] = []
+    params: list = []
+
+    search = (search or "").strip()
+    if search:
+        if search.isdigit():
+            where_clauses.append("(o.OrderId = ? OR c.FullName LIKE ?)")
+            params.extend([int(search), f"%{search}%"])
+        else:
+            where_clauses.append("c.FullName LIKE ?")
+            params.append(f"%{search}%")
+
+    if payment_status == "paid":
+        where_clauses.append("o.PaymentStatus = 1")
+    elif payment_status == "unpaid":
+        where_clauses.append("o.PaymentStatus = 0")
+
+    def _valid_date(s: str | None) -> str | None:
+        if not s:
+            return None
+        try:
+            datetime.strptime(s, "%Y-%m-%d")
+            return s
+        except ValueError:
+            return None
+
+    df = _valid_date(date_from)
+    dt = _valid_date(date_to)
+    if df:
+        where_clauses.append("o.OrderDate >= ?")
+        params.append(df)
+    if dt:
+        where_clauses.append("o.OrderDate <= ?")
+        params.append(dt)
+
+    where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM Orders o
+            JOIN Customers c ON c.CustomerId = o.CustomerId
+            {where_sql}
+            """,
+            params,
+        )
+        total = int(cursor.fetchone()[0])
+
+        offset = (page - 1) * page_size
+        cursor.execute(
+            f"""
+            SELECT o.OrderId,
+                   CONVERT(VARCHAR(10), o.OrderDate, 120) AS OrderDate,
+                   CONVERT(VARCHAR(10), o.DeliveryDate, 120) AS DeliveryDate,
+                   c.CustomerId, c.FullName,
+                   pm.MethodName,
+                   o.PaymentStatus,
+                   ISNULL(SUM(od.Quantity), 0) AS item_count,
+                   ISNULL(SUM(od.Quantity * od.UnitPrice), 0) AS total
+            FROM Orders o
+            JOIN Customers c ON c.CustomerId = o.CustomerId
+            LEFT JOIN PaymentMethods pm ON pm.PaymentMethodId = o.PaymentMethodId
+            LEFT JOIN OrderDetails od ON od.OrderId = o.OrderId
+            {where_sql}
+            GROUP BY o.OrderId, o.OrderDate, o.DeliveryDate,
+                     c.CustomerId, c.FullName, pm.MethodName, o.PaymentStatus
+            ORDER BY o.OrderDate DESC, o.OrderId DESC
+            OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            """,
+            params + [offset, page_size],
+        )
+
+        items = [
+            AdminOrderListItem(
+                OrderId=r[0],
+                OrderDate=r[1],
+                DeliveryDate=r[2],
+                CustomerId=r[3],
+                CustomerFullName=r[4],
+                PaymentMethodName=r[5],
+                PaymentStatus=bool(r[6]),
+                item_count=int(r[7] or 0),
+                total=_money(r[8]),
+            )
+            for r in cursor.fetchall()
+        ]
+
+        return AdminOrderListResponse(items=items, total=total, page=page, page_size=page_size)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/admin/orders/{order_id}", response_model=AdminOrderDetail)
+def get_admin_order_detail(order_id: int, admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT o.OrderId,
+                   CONVERT(VARCHAR(10), o.OrderDate, 120) AS OrderDate,
+                   CONVERT(VARCHAR(10), o.DeliveryDate, 120) AS DeliveryDate,
+                   o.DeliveryAddress, o.PaymentStatus,
+                   o.PaymentMethodId, pm.MethodName,
+                   c.CustomerId, c.FullName, c.Gender, c.Email, c.Phone, c.Address
+            FROM Orders o
+            JOIN Customers c ON c.CustomerId = o.CustomerId
+            LEFT JOIN PaymentMethods pm ON pm.PaymentMethodId = o.PaymentMethodId
+            WHERE o.OrderId = ?
+            """,
+            (order_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        cursor.execute(
+            """
+            SELECT od.ProductId, p.ProductName, cat.CategoryName,
+                   od.UnitPrice, od.Quantity, pi.ImageName
+            FROM OrderDetails od
+            JOIN Products p ON p.ProductId = od.ProductId
+            LEFT JOIN ProductCategories cat ON cat.CategoryId = p.CategoryId
+            OUTER APPLY (
+                SELECT TOP 1 ImageName FROM ProductImages
+                WHERE ProductId = od.ProductId ORDER BY ImageId
+            ) pi
+            WHERE od.OrderId = ?
+            ORDER BY od.ProductId
+            """,
+            (order_id,),
+        )
+
+        items: list[AdminOrderItem] = []
+        subtotal = 0.0
+        item_count = 0
+        for r in cursor.fetchall():
+            unit_price = float(r[3] or 0.0)
+            qty = int(r[4])
+            line_total = _money(unit_price * qty)
+            subtotal += line_total
+            item_count += qty
+            items.append(
+                AdminOrderItem(
+                    ProductId=r[0],
+                    ProductName=r[1],
+                    CategoryName=r[2],
+                    UnitPrice=unit_price,
+                    Quantity=qty,
+                    LineTotal=line_total,
+                    ImageUrl=blob_url_for_image(r[5]),
+                )
+            )
+
+        subtotal = _money(subtotal)
+        shipping = _money(SHIPPING_FEE) if subtotal > 0 else 0.0
+        tax = _money(subtotal * TAX_RATE)
+        total = _money(subtotal + shipping + tax)
+
+        customer = AdminOrderCustomer(
+            CustomerId=row[7],
+            FullName=row[8],
+            Gender=row[9],
+            Email=row[10],
+            Phone=row[11],
+            Address=row[12],
+        )
+
+        return AdminOrderDetail(
+            OrderId=row[0],
+            OrderDate=row[1],
+            DeliveryDate=row[2],
+            DeliveryAddress=row[3],
+            PaymentStatus=bool(row[4]),
+            PaymentMethodId=row[5],
+            PaymentMethodName=row[6],
+            customer=customer,
+            items=items,
+            item_count=item_count,
+            subtotal=subtotal,
+            shipping_fee=shipping,
+            tax_amount=tax,
+            total=total,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.patch("/api/admin/orders/{order_id}/payment-status", response_model=AdminOrderDetail)
+def update_order_payment_status(
+    order_id: int,
+    body: UpdatePaymentStatusRequest,
+    admin=Depends(require_admin),
+):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM Orders WHERE OrderId = ?", (order_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Order not found")
+        cursor.execute(
+            "UPDATE Orders SET PaymentStatus = ? WHERE OrderId = ?",
+            (1 if body.paid else 0, order_id),
+        )
+        conn.commit()
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+    return get_admin_order_detail(order_id)
+
+
+# ==================================================================
+# Admin promotions endpoints (require_admin)
+# ==================================================================
+
+
+def _validate_promotion_payload(body: PromotionPayload) -> tuple[str, str, str, str]:
+    name = (body.PromotionName or "").strip()
+    if not name or len(name) > 255:
+        raise HTTPException(status_code=422, detail="Promotion name must be 1–255 characters.")
+    details = (body.Details or "").strip()
+    if not details:
+        raise HTTPException(status_code=422, detail="Promotion details are required.")
+
+    try:
+        start = datetime.strptime(body.StartDate, "%Y-%m-%d").date()
+        end = datetime.strptime(body.EndDate, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="Dates must be ISO yyyy-mm-dd.")
+    if end < start:
+        raise HTTPException(status_code=422, detail="End date must be on or after the start date.")
+
+    return _sanitize_text(name), _sanitize_text(details), start.isoformat(), end.isoformat()
+
+
+def _promotion_status(start_iso: str, end_iso: str) -> str:
+    today = date.today().isoformat()
+    if today < start_iso:
+        return "upcoming"
+    if today > end_iso:
+        return "expired"
+    return "active"
+
+
+@app.get("/api/admin/promotions", response_model=list[AdminPromotion])
+def list_admin_promotions(admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT pr.PromotionId, pr.PromotionName, pr.Details,
+                   CONVERT(VARCHAR(10), pr.StartDate, 120),
+                   CONVERT(VARCHAR(10), pr.EndDate, 120),
+                   (SELECT COUNT(*) FROM Products p WHERE p.PromotionId = pr.PromotionId) AS linked_count
+            FROM Promotions pr
+            ORDER BY pr.StartDate DESC, pr.PromotionId DESC
+            """
+        )
+        return [
+            AdminPromotion(
+                PromotionId=r[0],
+                PromotionName=r[1],
+                Details=r[2],
+                StartDate=r[3],
+                EndDate=r[4],
+                linked_product_count=int(r[5] or 0),
+                status=_promotion_status(r[3], r[4]),
+            )
+            for r in cursor.fetchall()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/admin/promotions/{promotion_id}", response_model=AdminPromotion)
+def get_admin_promotion(promotion_id: int, admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT pr.PromotionId, pr.PromotionName, pr.Details,
+                   CONVERT(VARCHAR(10), pr.StartDate, 120),
+                   CONVERT(VARCHAR(10), pr.EndDate, 120),
+                   (SELECT COUNT(*) FROM Products p WHERE p.PromotionId = pr.PromotionId)
+            FROM Promotions pr WHERE pr.PromotionId = ?
+            """,
+            (promotion_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Promotion not found")
+        return AdminPromotion(
+            PromotionId=row[0],
+            PromotionName=row[1],
+            Details=row[2],
+            StartDate=row[3],
+            EndDate=row[4],
+            linked_product_count=int(row[5] or 0),
+            status=_promotion_status(row[3], row[4]),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/admin/promotions", response_model=AdminPromotion)
+def create_admin_promotion(body: PromotionPayload, admin=Depends(require_admin)):
+    name, details, start_iso, end_iso = _validate_promotion_payload(body)
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO Promotions (PromotionName, Details, StartDate, EndDate)
+            OUTPUT INSERTED.PromotionId
+            VALUES (?, ?, ?, ?)
+            """,
+            (name, details, start_iso, end_iso),
+        )
+        promotion_id = int(cursor.fetchone()[0])
+        conn.commit()
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+    return get_admin_promotion(promotion_id)
+
+
+@app.put("/api/admin/promotions/{promotion_id}", response_model=AdminPromotion)
+def update_admin_promotion(
+    promotion_id: int,
+    body: PromotionPayload,
+    admin=Depends(require_admin),
+):
+    name, details, start_iso, end_iso = _validate_promotion_payload(body)
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM Promotions WHERE PromotionId = ?", (promotion_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Promotion not found")
+        cursor.execute(
+            """
+            UPDATE Promotions
+            SET PromotionName = ?, Details = ?, StartDate = ?, EndDate = ?
+            WHERE PromotionId = ?
+            """,
+            (name, details, start_iso, end_iso, promotion_id),
+        )
+        conn.commit()
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+    return get_admin_promotion(promotion_id)
+
+
+@app.delete("/api/admin/promotions/{promotion_id}")
+def delete_admin_promotion(promotion_id: int, admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM Promotions WHERE PromotionId = ?", (promotion_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Promotion not found")
+        cursor.execute(
+            "UPDATE Products SET PromotionId = NULL WHERE PromotionId = ?",
+            (promotion_id,),
+        )
+        cursor.execute(
+            "DELETE FROM Promotions WHERE PromotionId = ?",
+            (promotion_id,),
+        )
+        conn.commit()
+        return {"message": "Promotion deleted", "PromotionId": promotion_id}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+# ==================================================================
+# Admin categories endpoints (require_admin)
+# Note: CategoryName is locked because the image upload pipeline relies
+#   on the hardcoded CATEGORY_SLUG mapping near line 623. Only the
+#   Description field is editable in v1.
+# ==================================================================
+
+
+@app.get("/api/admin/categories", response_model=list[AdminCategory])
+def list_admin_categories(admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT c.CategoryId, c.CategoryName, c.[Description],
+                   (SELECT COUNT(*) FROM Products p WHERE p.CategoryId = c.CategoryId) AS product_count
+            FROM ProductCategories c
+            ORDER BY c.CategoryId
+            """
+        )
+        return [
+            AdminCategory(
+                CategoryId=r[0],
+                CategoryName=r[1],
+                Description=r[2],
+                product_count=int(r[3] or 0),
+            )
+            for r in cursor.fetchall()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.put("/api/admin/categories/{category_id}", response_model=AdminCategory)
+def update_admin_category_description(
+    category_id: int,
+    body: CategoryDescriptionPayload,
+    admin=Depends(require_admin),
+):
+    description = (body.Description or "").strip() or None
+    if description is not None:
+        description = _sanitize_text(description)
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM ProductCategories WHERE CategoryId = ?", (category_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Category not found")
+        cursor.execute(
+            "UPDATE ProductCategories SET [Description] = ? WHERE CategoryId = ?",
+            (description, category_id),
+        )
+        conn.commit()
+
+        cursor.execute(
+            """
+            SELECT c.CategoryId, c.CategoryName, c.[Description],
+                   (SELECT COUNT(*) FROM Products p WHERE p.CategoryId = c.CategoryId)
+            FROM ProductCategories c WHERE c.CategoryId = ?
+            """,
+            (category_id,),
+        )
+        row = cursor.fetchone()
+        return AdminCategory(
+            CategoryId=row[0],
+            CategoryName=row[1],
+            Description=row[2],
+            product_count=int(row[3] or 0),
+        )
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+# ==================================================================
+# Admin customers endpoints (require_admin, read-only)
+# ==================================================================
+
+
+@app.get("/api/admin/customers", response_model=AdminCustomerListResponse)
+def list_admin_customers(
+    search: str = "",
+    page: int = 1,
+    page_size: int = 20,
+    admin=Depends(require_admin),
+):
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 50:
+        page_size = 20
+
+    search = (search or "").strip()
+    where_clauses: list[str] = []
+    params: list = []
+    if search:
+        where_clauses.append(
+            "(c.FullName LIKE ? OR ISNULL(c.Email, '') LIKE ? OR ISNULL(c.Phone, '') LIKE ? OR a.Username LIKE ?)"
+        )
+        like = f"%{search}%"
+        params.extend([like, like, like, like])
+    where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute(
+            f"""
+            SELECT COUNT(*) FROM Customers c
+            JOIN Accounts a ON a.AccountId = c.AccountId
+            {where_sql}
+            """,
+            params,
+        )
+        total = int(cursor.fetchone()[0])
+
+        offset = (page - 1) * page_size
+        cursor.execute(
+            f"""
+            SELECT c.CustomerId, c.AccountId, a.Username, c.FullName, c.Gender,
+                   c.Email, c.Phone,
+                   CONVERT(VARCHAR(10), c.DateOfBirth, 120) AS DateOfBirth,
+                   ISNULL(o_stats.order_count, 0) AS order_count,
+                   ISNULL(o_stats.total_spend, 0) AS total_spend
+            FROM Customers c
+            JOIN Accounts a ON a.AccountId = c.AccountId
+            OUTER APPLY (
+                SELECT COUNT(DISTINCT o.OrderId) AS order_count,
+                       SUM(od.Quantity * od.UnitPrice) AS total_spend
+                FROM Orders o
+                LEFT JOIN OrderDetails od ON od.OrderId = o.OrderId
+                WHERE o.CustomerId = c.CustomerId
+            ) o_stats
+            {where_sql}
+            ORDER BY c.CustomerId
+            OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            """,
+            params + [offset, page_size],
+        )
+
+        items = [
+            AdminCustomerListItem(
+                CustomerId=r[0],
+                AccountId=r[1],
+                Username=r[2],
+                FullName=r[3],
+                Gender=r[4],
+                Email=r[5],
+                Phone=r[6],
+                DateOfBirth=r[7],
+                order_count=int(r[8] or 0),
+                total_spend=_money(r[9]),
+            )
+            for r in cursor.fetchall()
+        ]
+
+        return AdminCustomerListResponse(
+            items=items, total=total, page=page, page_size=page_size,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/admin/customers/{customer_id}", response_model=AdminCustomerDetail)
+def get_admin_customer_detail(customer_id: int, admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT c.CustomerId, c.AccountId, a.Username, a.AvatarUrl,
+                   c.FullName, c.Gender, c.Email, c.Phone, c.Address,
+                   CONVERT(VARCHAR(10), c.DateOfBirth, 120) AS DateOfBirth
+            FROM Customers c
+            JOIN Accounts a ON a.AccountId = c.AccountId
+            WHERE c.CustomerId = ?
+            """,
+            (customer_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Customer not found")
+
+        cursor.execute(
+            """
+            SELECT o.OrderId,
+                   CONVERT(VARCHAR(10), o.OrderDate, 120) AS OrderDate,
+                   CONVERT(VARCHAR(10), o.DeliveryDate, 120) AS DeliveryDate,
+                   o.PaymentStatus,
+                   ISNULL(SUM(od.Quantity), 0) AS item_count,
+                   ISNULL(SUM(od.Quantity * od.UnitPrice), 0) AS total
+            FROM Orders o
+            LEFT JOIN OrderDetails od ON od.OrderId = o.OrderId
+            WHERE o.CustomerId = ?
+            GROUP BY o.OrderId, o.OrderDate, o.DeliveryDate, o.PaymentStatus
+            ORDER BY o.OrderDate DESC, o.OrderId DESC
+            """,
+            (customer_id,),
+        )
+        orders_raw = cursor.fetchall()
+        orders = [
+            AdminCustomerOrderSummary(
+                OrderId=r[0],
+                OrderDate=r[1],
+                DeliveryDate=r[2],
+                PaymentStatus=bool(r[3]),
+                item_count=int(r[4] or 0),
+                total=_money(r[5]),
+            )
+            for r in orders_raw
+        ]
+        order_count = len(orders)
+        total_spend = _money(sum(o.total for o in orders))
+
+        return AdminCustomerDetail(
+            CustomerId=row[0],
+            AccountId=row[1],
+            Username=row[2],
+            AvatarUrl=row[3],
+            FullName=row[4],
+            Gender=row[5],
+            Email=row[6],
+            Phone=row[7],
+            Address=row[8],
+            DateOfBirth=row[9],
+            order_count=order_count,
+            total_spend=total_spend,
+            orders=orders,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+# ==================================================================
+# Admin feedback inbox endpoints (require_admin, read-only)
+# ==================================================================
+
+
+@app.get("/api/admin/feedback/topics", response_model=list[AdminFeedbackTopic])
+def list_feedback_topics(admin=Depends(require_admin)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT TopicId, TopicName FROM FeedbackTopics ORDER BY TopicId"
+        )
+        return [
+            AdminFeedbackTopic(TopicId=r[0], TopicName=r[1])
+            for r in cursor.fetchall()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/admin/feedback", response_model=AdminFeedbackResponse)
+def list_admin_feedback(
+    topic_id: int | None = None,
+    has_transaction: str = "",
+    page: int = 1,
+    page_size: int = 20,
+    admin=Depends(require_admin),
+):
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 50:
+        page_size = 20
+
+    where_clauses: list[str] = []
+    params: list = []
+    if topic_id is not None:
+        where_clauses.append("f.TopicId = ?")
+        params.append(topic_id)
+    has_transaction = (has_transaction or "").strip().lower()
+    if has_transaction == "true":
+        where_clauses.append("f.HasTransaction = 1")
+    elif has_transaction == "false":
+        where_clauses.append("f.HasTransaction = 0")
+
+    where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT COUNT(*) FROM Feedbacks f {where_sql}", params,
+        )
+        total = int(cursor.fetchone()[0])
+
+        offset = (page - 1) * page_size
+        cursor.execute(
+            f"""
+            SELECT f.FeedbackId, f.FullName, f.Address, f.Phone, f.Email,
+                   f.ReferralSource, f.HasTransaction, f.Content,
+                   CONVERT(VARCHAR(10), f.FeedbackDate, 120) AS FeedbackDate,
+                   f.TopicId, ft.TopicName
+            FROM Feedbacks f
+            JOIN FeedbackTopics ft ON ft.TopicId = f.TopicId
+            {where_sql}
+            ORDER BY f.FeedbackDate DESC, f.FeedbackId DESC
+            OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+            """,
+            params + [offset, page_size],
+        )
+
+        items = [
+            AdminFeedbackItem(
+                FeedbackId=r[0],
+                FullName=r[1],
+                Address=r[2],
+                Phone=str(r[3]) if r[3] is not None else None,
+                Email=r[4],
+                ReferralSource=r[5],
+                HasTransaction=bool(r[6]),
+                Content=r[7] or "",
+                FeedbackDate=r[8],
+                TopicId=r[9],
+                TopicName=r[10],
+            )
+            for r in cursor.fetchall()
+        ]
+
+        return AdminFeedbackResponse(
+            items=items, total=total, page=page, page_size=page_size,
+        )
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
