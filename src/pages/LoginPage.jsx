@@ -12,7 +12,9 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (user) navigate("/", { replace: true });
+    if (user) {
+      navigate(user.role === "admin" ? "/admin" : "/", { replace: true });
+    }
   }, [user, navigate]);
 
   async function handleSubmit(e) {
@@ -20,8 +22,8 @@ export default function LoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      await login(username, password);
-      navigate("/");
+      const data = await login(username, password);
+      navigate(data.role === "admin" ? "/admin" : "/");
     } catch (err) {
       setError(err.message || "Invalid credentials");
     } finally {

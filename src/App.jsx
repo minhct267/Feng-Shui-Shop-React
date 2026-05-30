@@ -1,26 +1,26 @@
-import { Outlet, createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
+import Footer from './components/Footer'
+import Header from './components/Header'
+import ManageProducts from './components/ManageProducts'
 import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
-import Header from './components/Header'
-import Footer from './components/Footer'
+import AddProductPage from './pages/AddProductPage'
+import AdminCategoriesPage from './pages/admin/AdminCategoriesPage'
+import AdminCustomerDetailPage from './pages/admin/AdminCustomerDetailPage'
+import AdminCustomersPage from './pages/admin/AdminCustomersPage'
+import AdminDashboardPage from './pages/admin/AdminDashboardPage'
+import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
+import AdminLayout from './pages/admin/AdminLayout'
+import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage'
+import AdminOrdersPage from './pages/admin/AdminOrdersPage'
+import AdminPromotionFormPage from './pages/admin/AdminPromotionFormPage'
+import AdminPromotionsPage from './pages/admin/AdminPromotionsPage'
+import CartPage from './pages/CartPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
 import ProductDetailPage from './pages/ProductDetailPage'
-import CartPage from './pages/CartPage'
-import AddProductPage from './pages/AddProductPage'
+import RegisterPage from './pages/RegisterPage'
 import UpdateProductPage from './pages/UpdateProductPage'
-import ManageProducts from './components/ManageProducts'
-import AdminLayout from './pages/admin/AdminLayout'
-import AdminDashboardPage from './pages/admin/AdminDashboardPage'
-import AdminOrdersPage from './pages/admin/AdminOrdersPage'
-import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage'
-import AdminPromotionsPage from './pages/admin/AdminPromotionsPage'
-import AdminPromotionFormPage from './pages/admin/AdminPromotionFormPage'
-import AdminCategoriesPage from './pages/admin/AdminCategoriesPage'
-import AdminCustomersPage from './pages/admin/AdminCustomersPage'
-import AdminCustomerDetailPage from './pages/admin/AdminCustomerDetailPage'
-import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
 
 function Layout() {
   return (
@@ -47,7 +47,8 @@ const router = createBrowserRouter([
         path: '/admin',
         element: <AdminLayout />,
         children: [
-          { index: true, element: <AdminDashboardPage /> },
+          { index: true, element: <AdminCustomersPage /> },
+          { path: 'dashboard', element: <AdminDashboardPage /> },
           { path: 'orders', element: <AdminOrdersPage /> },
           { path: 'orders/:orderId', element: <AdminOrderDetailPage /> },
           { path: 'products', element: <ManageProducts /> },

@@ -2,12 +2,12 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 const NAV_ITEMS = [
-  { to: "/admin", label: "Dashboard", icon: "dashboard", end: true },
+  { to: "/admin", label: "Customers", icon: "group", end: true },
+  { to: "/admin/dashboard", label: "Dashboard", icon: "dashboard" },
   { to: "/admin/orders", label: "Orders", icon: "receipt_long" },
   { to: "/admin/products", label: "Products", icon: "inventory_2" },
   { to: "/admin/promotions", label: "Promotions", icon: "sell" },
   { to: "/admin/categories", label: "Categories", icon: "category" },
-  { to: "/admin/customers", label: "Customers", icon: "group" },
   { to: "/admin/feedback", label: "Feedback", icon: "feedback" },
 ];
 
