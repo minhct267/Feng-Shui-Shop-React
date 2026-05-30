@@ -134,9 +134,9 @@ export default function AdminFeedbackPage() {
         <h1 className="text-4xl font-headline font-bold text-primary tracking-tight">
           Curator&apos;s Inbox
         </h1>
-        <p className="text-on-surface-variant font-light max-w-2xl mt-2">
+        {/* <p className="text-on-surface-variant font-light max-w-2xl mt-2">
           Whispers from visitors and patrons, gathered by topic.
-        </p>
+        </p> */}
       </div>
 
       <div className="mb-8 flex flex-wrap items-center gap-4">

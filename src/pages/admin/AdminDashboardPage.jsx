@@ -71,10 +71,10 @@ export default function AdminDashboardPage() {
           <h1 className="text-4xl font-headline font-bold text-primary tracking-tight">
             Sanctuary Overview
           </h1>
-          <p className="text-on-surface-variant font-light max-w-md mt-2">
+          {/* <p className="text-on-surface-variant font-light max-w-md mt-2">
             A bird&apos;s-eye view of the curator&apos;s ledger, woven from
             orders, artifacts, and visitor whispers.
-          </p>
+          </p> */}
         </div>
       </div>
 

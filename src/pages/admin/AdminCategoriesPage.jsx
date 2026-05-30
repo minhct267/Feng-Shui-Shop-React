@@ -138,18 +138,17 @@ export default function AdminCategoriesPage() {
         <h1 className="text-4xl font-headline font-bold text-primary tracking-tight">
           Categories
         </h1>
-        <p className="text-on-surface-variant font-light max-w-2xl mt-2">
+        {/* <p className="text-on-surface-variant font-light max-w-2xl mt-2">
           Refine the description of each elemental family. Names are locked
           because they tie into image storage paths &mdash; new categories will
           arrive in a future release.
-        </p>
+        </p> */}
       </div>
 
       <div className="bg-secondary-container/40 text-on-secondary-container rounded-lg p-4 mb-6 flex items-start gap-3 text-sm">
         <span className="material-symbols-outlined text-base">info</span>
         <p className="font-light leading-relaxed">
-          Edit any description below and press <strong>Save</strong>. The change
-          will be reflected immediately in product cards and detail pages.
+          Edit any description below and press <strong>Save</strong>.
         </p>
       </div>
 

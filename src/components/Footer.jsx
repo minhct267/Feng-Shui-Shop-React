@@ -52,7 +52,7 @@ export default function Footer() {
       </div>
       <div className="max-w-7xl mx-auto px-12 pb-12 border-t border-outline-variant/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
         <p className="text-stone-500 font-body text-[10px] uppercase tracking-widest">
-          &copy; 2024 The Elemental Sanctuary. Curated Wisdom.
+          &copy; 2026 The Elemental Sanctuary. Curated Wisdom.
         </p>
         <div className="flex space-x-8">
           <a className="text-stone-500 hover:text-amber-900 transition-colors text-[10px] uppercase tracking-widest" href="#">Privacy</a>

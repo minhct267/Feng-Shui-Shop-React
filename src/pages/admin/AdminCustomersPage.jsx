@@ -68,12 +68,12 @@ export default function AdminCustomersPage() {
       <div className="mb-8 flex justify-between items-end flex-wrap gap-4">
         <div>
           <h1 className="text-4xl font-headline font-bold text-primary tracking-tight">
-            Patrons
+            Customers
           </h1>
-          <p className="text-on-surface-variant font-light max-w-md mt-2">
-            The patrons drawn to the sanctuary, with their spend and order
+          {/* <p className="text-on-surface-variant font-light max-w-md mt-2">
+            The customers drawn to the sanctuary, with their spend and order
             history at a glance.
-          </p>
+          </p> */}
         </div>
         <div className="relative">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
@@ -100,7 +100,7 @@ export default function AdminCustomersPage() {
           <thead>
             <tr className="bg-surface-container-low/50">
               <th className="px-6 py-4 text-[10px] tracking-widest uppercase font-bold text-outline">
-                Patron
+                Customer
               </th>
               <th className="px-6 py-4 text-[10px] tracking-widest uppercase font-bold text-outline">
                 Contact
@@ -109,7 +109,7 @@ export default function AdminCustomersPage() {
                 Orders
               </th>
               <th className="px-6 py-4 text-[10px] tracking-widest uppercase font-bold text-outline text-right">
-                Lifetime Spend
+                Total Spend
               </th>
             </tr>
           </thead>
@@ -134,7 +134,7 @@ export default function AdminCustomersPage() {
                     group
                   </span>
                   <p className="font-headline italic text-lg text-on-surface mb-1">
-                    No patrons match your query
+                    No customers match your query
                   </p>
                 </td>
               </tr>
@@ -195,7 +195,7 @@ export default function AdminCustomersPage() {
         <div className="mt-6 flex justify-between items-center">
           <p className="text-xs text-on-surface-variant font-light">
             Showing {(page - 1) * PAGE_SIZE + 1}–
-            {Math.min(page * PAGE_SIZE, total)} of {total} patrons
+            {Math.min(page * PAGE_SIZE, total)} of {total} customers
           </p>
           <div className="flex items-center gap-2">
             <button

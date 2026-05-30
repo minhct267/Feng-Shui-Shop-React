@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { fetchProducts } from "../services/api";
 import ProductCard from "./ProductCard";
 
@@ -75,7 +75,7 @@ export default function ProductGrid() {
               <ProductCard
                 key={product.ProductId}
                 product={product}
-                staggered={index % 3 === 1}
+                // staggered={index % 3 === 1}
               />
             ))}
           </div>

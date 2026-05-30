@@ -3,32 +3,35 @@ import html
 import json
 import os
 import re
-from datetime import date, datetime, timezone, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from dotenv import load_dotenv
-
+from blob_storage import (blob_url_for_image, delete_blob, move_blob_to_bin,
+                          upload_image)
 from database import get_db_connection
-from models import (
-    ProductCard, Category, Promotion, ProductCreateResponse, ProductUpdateResponse,
-    AdminProductListItem, AdminProductListResponse, ProductImage, AdminProductDetail,
-    ProductListResponse, RegisterRequest, AuthUser,
-    CustomerProductDetail, PaymentMethod, CartLineItem, CartResponse,
-    AddToCartRequest, UpdateCartItemRequest, CheckoutRequest, OrderConfirmationResponse,
-    DashboardResponse, DashboardTopProduct, DashboardRecentOrder, DashboardRecentFeedback,
-    AdminOrderListItem, AdminOrderListResponse, AdminOrderItem, AdminOrderCustomer,
-    AdminOrderDetail, UpdatePaymentStatusRequest,
-    AdminPromotion, PromotionPayload,
-    AdminCategory, CategoryDescriptionPayload,
-    AdminCustomerListItem, AdminCustomerListResponse,
-    AdminCustomerOrderSummary, AdminCustomerDetail,
-    AdminFeedbackTopic, AdminFeedbackItem, AdminFeedbackResponse,
-)
-from blob_storage import blob_url_for_image, upload_image, delete_blob, move_blob_to_bin
+from dotenv import load_dotenv
+from fastapi import (Depends, FastAPI, File, Form, HTTPException, Request,
+                     Response, UploadFile)
+from fastapi.middleware.cors import CORSMiddleware
+from models import (AddToCartRequest, AdminCategory, AdminCustomerDetail,
+                    AdminCustomerListItem, AdminCustomerListResponse,
+                    AdminCustomerOrderSummary, AdminFeedbackItem,
+                    AdminFeedbackResponse, AdminFeedbackTopic,
+                    AdminOrderCustomer, AdminOrderDetail, AdminOrderItem,
+                    AdminOrderListItem, AdminOrderListResponse,
+                    AdminProductDetail, AdminProductListItem,
+                    AdminProductListResponse, AdminPromotion, AuthUser,
+                    CartLineItem, CartResponse, Category,
+                    CategoryDescriptionPayload, CheckoutRequest,
+                    CustomerProductDetail, DashboardRecentFeedback,
+                    DashboardRecentOrder, DashboardResponse,
+                    DashboardTopProduct, OrderConfirmationResponse,
+                    PaymentMethod, ProductCard, ProductCreateResponse,
+                    ProductImage, ProductListResponse, ProductUpdateResponse,
+                    Promotion, PromotionPayload, RegisterRequest,
+                    UpdateCartItemRequest, UpdatePaymentStatusRequest)
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -47,8 +50,7 @@ IS_PRODUCTION = ENVIRONMENT == "production"
 COOKIE_SAMESITE = "none" if IS_PRODUCTION else "lax"
 COOKIE_SECURE = IS_PRODUCTION
 
-# Usernames that cannot be registered through the public flow.
-# 'admin' is reserved for the env-based admin login.
+# Admin
 RESERVED_USERNAMES = {"admin"}
 
 ALLOWED_GENDERS = {"Female", "Male", "Unidentified"}

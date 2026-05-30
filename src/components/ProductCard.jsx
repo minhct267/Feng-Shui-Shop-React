@@ -9,7 +9,7 @@ export default function ProductCard({ product, staggered }) {
     ?? (product.ImageName ? `/products/${product.ImageName}` : null);
 
   const priceDisplay = product.Price != null
-    ? `$${product.Price.toFixed(0)}`
+    ? `AUD${product.Price.toFixed(0)}`
     : "";
 
   function handleInvokePresence() {
@@ -57,7 +57,7 @@ export default function ProductCard({ product, staggered }) {
         onClick={handleInvokePresence}
         className="mt-4 w-full py-3 border border-outline-variant/20 group-hover:bg-primary group-hover:text-on-primary transition-all duration-300 font-label uppercase tracking-widest text-[10px]"
       >
-        {user?.role === "admin" ? "Edit Product" : "Invoke Presence"}
+        {user?.role === "admin" ? "Edit Product" : "View Product"}
       </button>
     </div>
   );
